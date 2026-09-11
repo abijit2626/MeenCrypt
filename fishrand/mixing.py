@@ -30,6 +30,11 @@ USB_CODE_INFO = "FISHRAND-AES256-GCM-v2-usbcode"
 # v3: the fish drives the key schedule (per-frame HMAC chain + noise
 # extraction). The secret is still the universal USB code.
 FISHCHAIN_INFO = "FISHRAND-AES256-GCM-v3-fishchain"
+# v4: the secret is fresh OS CSPRNG bytes generated per session (never a
+# shared code); the resulting AES key is then wrapped with an RSA-3072
+# public key (see fishrand/rsa_hybrid.py) so decryption needs only the
+# matching RSA private key, not the fish window again.
+RSA_HYBRID_INFO = "FISHRAND-AES256-GCM-v4-rsa-hybrid"
 
 
 def derive_key(fish_digest: bytes, secret: bytes, *, info: str = DOMAIN_INFO) -> bytes:

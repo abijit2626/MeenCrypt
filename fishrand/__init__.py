@@ -37,9 +37,11 @@ from .api import (
     FishrandError,
     decrypt_message,
     decrypt_package,
+    decrypt_rsa_hybrid_package,
     derive_key,
     encrypt_message,
     encrypt_with_fish_entropy,
+    encrypt_with_rsa_hybrid,
 )
 from .canonicalize import canonical_bytes
 from .schema import (
@@ -53,6 +55,15 @@ from .schema import (
 )
 from .package import load_package, save_package
 from .fishchain import fish_chain, fish_noise, fish_units, verify_commitment
+from .rsa_hybrid import (
+    KeyUnwrapError,
+    PrivateKeyNotFound,
+    generate_keypair,
+    load_private_key,
+    load_public_key,
+    serialize_private_key,
+    serialize_public_key,
+)
 
 __version__ = "1.0.0"
 
@@ -73,10 +84,19 @@ __all__ = [
     "decrypt_message",
     "encrypt_with_fish_entropy",
     "decrypt_package",
+    "encrypt_with_rsa_hybrid",
+    "decrypt_rsa_hybrid_package",
     "load_package",
     "save_package",
     "fish_chain",
     "fish_noise",
     "fish_units",
     "verify_commitment",
+    "KeyUnwrapError",
+    "PrivateKeyNotFound",
+    "generate_keypair",
+    "load_private_key",
+    "load_public_key",
+    "serialize_private_key",
+    "serialize_public_key",
 ]

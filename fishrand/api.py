@@ -30,21 +30,22 @@ from .canonicalize import canonical_bytes
 from .crypto import ALGORITHM, canonical_aad, decrypt as _gcm_decrypt, encrypt as _gcm_encrypt
 from .dashboard import make_emit
 from .entropy import fish_digest_bytes
+from .errors import AuthenticationFailure, FishrandError
 from .fishchain import fish_chain, fish_noise, fish_units, verify_commitment
-from .mixing import DOMAIN_INFO, FISHCHAIN_INFO, KDF_NAME, KEY_BITS, USB_CODE_INFO, derive_key
+from .mixing import (
+    DOMAIN_INFO,
+    FISHCHAIN_INFO,
+    KDF_NAME,
+    KEY_BITS,
+    RSA_HYBRID_INFO,
+    USB_CODE_INFO,
+    derive_key,
+)
 from .observe import count_observations, observation_stats
 from .package import build_package, parse_package
+from .rsa_hybrid import unwrap_session_key, wrap_session_key
 from .schema import validate_observations
 from .cspng import aead_nonce_12, session_random_32, usb_code_bytes
-
-
-class FishrandError(Exception):
-    """Base error for the FISHRAND API."""
-
-class AuthenticationFailure(FishrandError):
-    """AES-GCM tag verification failed - data was tampered with or the
-    key/nonce/AAD do not match. The caller must treat the payload as
-    untrusted; plaintext is never returned on failure."""
 
 
 def derive_key_decode(data: dict) -> bytes:
@@ -391,6 +392,176 @@ def _parse_and_decrypt(key: bytes, package: dict) -> bytes:
         raise AuthenticationFailure("AES-256-GCM authentication failed (data tampered or key mismatch)") from exc
 
 
+def encrypt_with_rsa_hybrid(
+    fish_observations: dict,
+    plaintext: str | bytes,
+    *,
+    public_key: Any,
+    emit: Callable[..., Any] | None = None,
+) -> dict:
+    """RSA-OAEP hybrid pipeline (package version 4).
+
+        validate -> canonicalize -> SHA-256 (audit-only fish_hash)
+        + fresh OS CSPRNG -> HKDF-SHA256 -> AES-256 session key
+        -> AES-256-GCM encrypt
+        -> RSA-OAEP wrap the session key with `public_key`
+        -> v4 package
+
+    Unlike encrypt_with_fish_entropy, the fish digest here NEVER
+    contributes to secrecy or gates decryption - it is folded into the KDF
+    purely for domain-separated conditioning, exactly like the v1 legacy
+    path, and is otherwise just audit metadata on the package. The real
+    secret for this mode is the fresh 32-byte OS CSPRNG output, which is
+    discarded the moment the RSA-wrapped session key is computed - it is
+    never stored, unlike v1's `os_random_b64`.
+
+    Returns the package dict. `emit` (if provided) receives each step
+    event for CLI/dashboard streaming.
+    """
+    if emit is None:
+        emit = make_emit()
+
+    _t = time.perf_counter()
+    data = validate_observations(fish_observations)
+    stats = observation_stats(data)
+    emit("validation", "ok", (time.perf_counter() - _t) * 1000, stats.to_dict())
+
+    _t = time.perf_counter()
+    canonical = canonical_bytes(data)
+    emit(
+        "canonicalization",
+        "ok",
+        (time.perf_counter() - _t) * 1000,
+        {"canonical_bytes": len(canonical), "utf8": "yes"},
+    )
+
+    _t = time.perf_counter()
+    fish_digest = fish_digest_bytes(data)
+    emit(
+        "conditioning",
+        "ok",
+        (time.perf_counter() - _t) * 1000,
+        {
+            "algorithm": "SHA-256",
+            "fish_digest": fish_digest.hex(),
+            "note": "conditioning/audit metadata only - not a decryption gate in v4",
+        },
+    )
+
+    _t = time.perf_counter()
+    secret = session_random_32()
+    emit(
+        "os_csprng",
+        "ok",
+        (time.perf_counter() - _t) * 1000,
+        {"source": "secrets.token_bytes(32)", "bytes": len(secret), "secret": "HIDDEN"},
+    )
+
+    _t = time.perf_counter()
+    key = derive_key(fish_digest, secret, info=RSA_HYBRID_INFO)
+    emit(
+        "kdf",
+        "ok",
+        (time.perf_counter() - _t) * 1000,
+        {"kdf": KDF_NAME, "info": RSA_HYBRID_INFO, "key_bits": KEY_BITS, "key_material": "HIDDEN"},
+    )
+
+    payload = plaintext.encode("utf-8") if isinstance(plaintext, str) else plaintext
+    nonce = aead_nonce_12()
+    aad = canonical_aad(version=4)
+    _t = time.perf_counter()
+    blob = _gcm_encrypt(key, nonce, payload, aad)
+    emit(
+        "aes_gcm",
+        "ok",
+        (time.perf_counter() - _t) * 1000,
+        {
+            "algorithm": ALGORITHM,
+            "nonce_hex": nonce.hex(),
+            "ciphertext_bytes": len(blob),
+            "tag": "included (16 bytes)",
+            "aad": "authenticated metadata",
+        },
+    )
+
+    _t = time.perf_counter()
+    wrapped_key = wrap_session_key(public_key, key)
+    emit(
+        "rsa_wrap",
+        "ok",
+        (time.perf_counter() - _t) * 1000,
+        {
+            "algorithm": "RSA-OAEP-SHA256",
+            "rsa_key_size": public_key.key_size,
+            "wrapped_key_bytes": len(wrapped_key),
+            "key_material": "HIDDEN",
+        },
+    )
+
+    package = build_package(
+        fish_hash=fish_digest.hex(),
+        nonce=nonce,
+        ciphertext_blob=blob,
+        aad=aad,
+        os_random=None,
+        kdf_context=RSA_HYBRID_INFO,
+        encrypted_session_key=wrapped_key,
+        key_algorithm="RSA-OAEP-SHA256",
+        rsa_key_size=public_key.key_size,
+        metadata={
+            "key_bits": KEY_BITS,
+            "key_material": "HIDDEN",
+            "source": data.get("source"),
+            "units": count_observations(data),
+        },
+    )
+    emit("package", "complete", None, {"version": package["version"], "algorithm": package["algorithm"]})
+    return package
+
+
+def decrypt_rsa_hybrid_package(package: dict, *, private_key: Any, emit: Callable[..., Any] | None = None) -> bytes:
+    """Decrypt a v4 RSA-OAEP hybrid package.
+
+    Only the RSA private key is required - no fish observations, no USB
+    code. Raises AuthenticationFailure (via KeyUnwrapError, or on an
+    AES-GCM tag failure) on any mismatch; plaintext is never returned on
+    failure.
+    """
+    if emit is None:
+        emit = make_emit()
+
+    parsed = parse_package(package)
+    if parsed["version"] != 4:
+        raise FishrandError(f"decrypt_rsa_hybrid_package requires a v4 package, got version {parsed['version']}")
+
+    _t = time.perf_counter()
+    key = unwrap_session_key(private_key, parsed["encrypted_session_key"])
+    emit(
+        "rsa_unwrap",
+        "ok",
+        (time.perf_counter() - _t) * 1000,
+        {"algorithm": parsed["key_algorithm"], "key_material": "HIDDEN"},
+    )
+
+    _t = time.perf_counter()
+    try:
+        plaintext = _gcm_decrypt(key, parsed["nonce"], parsed["payload"], parsed["aad"])
+    except Exception as exc:
+        emit("aes_gcm", "error", (time.perf_counter() - _t) * 1000, {
+            "reason": "AUTHENTICATION FAILED",
+            "detail": "AES-256-GCM tag did not verify (tampered or wrong key)",
+        })
+        raise AuthenticationFailure("AES-256-GCM authentication failed (data tampered or key mismatch)") from exc
+
+    emit("aes_gcm", "ok", (time.perf_counter() - _t) * 1000, {
+        "algorithm": parsed["algorithm"],
+        "authenticated": "yes",
+        "plaintext_bytes": len(plaintext),
+    })
+    emit("decrypt", "complete", None, {"result": "plaintext released"})
+    return plaintext
+
+
 __all__ = [
     "FishrandError",
     "AuthenticationFailure",
@@ -399,4 +570,6 @@ __all__ = [
     "decrypt_message",
     "encrypt_with_fish_entropy",
     "decrypt_package",
+    "encrypt_with_rsa_hybrid",
+    "decrypt_rsa_hybrid_package",
 ]

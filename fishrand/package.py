@@ -17,6 +17,13 @@ identify / reconstruct a session:
     the v3 fish-chain key schedule (see fishrand/fishchain.py). A single
     USB code still unlocks ANY package the fish encrypted.
 
+  version 4 (RSA-OAEP hybrid): does NOT store any secret and does NOT need
+    the fish window again at decrypt time. The ephemeral AES-256 session
+    key is wrapped with an RSA-3072 public key (`encrypted_session_key_b64`,
+    see fishrand/rsa_hybrid.py); only the matching RSA private key can
+    unwrap it. `fish_hash` is retained purely as audit metadata here, never
+    a decryption gate.
+
 SECURITY NOTE:
     The secret AES key is NEVER stored in the package, and since v2 neither
     is any recoverable randomness. Losing the USB code means the entry is
@@ -30,7 +37,7 @@ import datetime
 import json
 from typing import Any
 
-_PACKAGE_VERSIONS = (1, 2, 3)
+_PACKAGE_VERSIONS = (1, 2, 3, 4)
 
 
 def _b64(payload: bytes) -> str:
@@ -53,6 +60,9 @@ def build_package(
     os_random: bytes | None,
     kdf_context: str,
     fish_commitment: bytes | None = None,
+    encrypted_session_key: bytes | None = None,
+    key_algorithm: str | None = None,
+    rsa_key_size: int | None = None,
     metadata: dict | None = None,
 ) -> dict:
     """Assemble the encrypted package (JSON-safe dict).
@@ -62,8 +72,22 @@ def build_package(
     os_random=None + fish_commitment → v3 fish-chain package: no secret,
                              plus a public commitment binding the exact fish
                              window (see fishrand/fishchain.py).
+    encrypted_session_key given → v4 RSA-OAEP hybrid package: no secret, no
+                             fish_commitment; the AES session key is wrapped
+                             for an RSA-3072 public key (see
+                             fishrand/rsa_hybrid.py) and fish_hash is
+                             audit-only metadata.
     """
-    version = 1 if os_random is not None else (3 if fish_commitment is not None else 2)
+    if encrypted_session_key is not None and (os_random is not None or fish_commitment is not None):
+        raise ValueError("v4 (RSA hybrid) package must not carry os_random or fish_commitment")
+    if encrypted_session_key is not None:
+        version = 4
+    elif os_random is not None:
+        version = 1
+    elif fish_commitment is not None:
+        version = 3
+    else:
+        version = 2
     base: dict = {
         "version": version,
         "algorithm": "AES-256-GCM",
@@ -78,6 +102,10 @@ def build_package(
         base["os_random_b64"] = _b64(os_random)
     if fish_commitment is not None:
         base["fish_commitment_b64"] = _b64(fish_commitment)
+    if encrypted_session_key is not None:
+        base["key_algorithm"] = key_algorithm
+        base["rsa_key_size"] = rsa_key_size
+        base["encrypted_session_key_b64"] = _b64(encrypted_session_key)
     base["metadata"] = {
         **(metadata or {}),
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -99,6 +127,13 @@ _SECURITY_NOTE = {
         "v3 fish-chain: no secret stored. The fish drives the key schedule "
         "(HMAC-SHA256 per fish unit) and signs the package via fish_commitment; "
         "key = fish_chain(usb_code, fish). usb_code lives only on your USB key."
+    ),
+    4: (
+        "v4 RSA-OAEP hybrid: the ephemeral AES-256 session key is wrapped with "
+        "your RSA-3072 public key. Decryption needs ONLY the matching RSA "
+        "private key (kept off this repo, e.g. on a USB drive) - the fish "
+        "window is not required again. fish_hash here is audit metadata only, "
+        "never a decryption gate."
     ),
 }
 
@@ -122,6 +157,8 @@ def parse_package(obj: dict) -> dict:
             raise ValueError("os_random: expected bytes or None")
         if obj.get("fish_commitment") is not None and not isinstance(obj["fish_commitment"], bytes):
             raise ValueError("fish_commitment: expected bytes or None")
+        if obj.get("encrypted_session_key") is not None and not isinstance(obj["encrypted_session_key"], bytes):
+            raise ValueError("encrypted_session_key: expected bytes or None")
         return obj
     required = {
         "version", "algorithm", "kdf", "fish_hash", "kdf_context",
@@ -141,7 +178,7 @@ def parse_package(obj: dict) -> dict:
         os_random = un_b64(str(obj["os_random_b64"]), field="os_random_b64")
     else:
         if "os_random_b64" in obj:
-            raise ValueError("v2/v3 package must not embed a secret ('os_random_b64')")
+            raise ValueError("v2/v3/v4 package must not embed a secret ('os_random_b64')")
         os_random = None  # the universal USB code lives outside the package
 
     fish_commitment: bytes | None
@@ -152,6 +189,22 @@ def parse_package(obj: dict) -> dict:
     else:
         fish_commitment = None
 
+    encrypted_session_key: bytes | None
+    key_algorithm: str | None
+    rsa_key_size: int | None
+    if version == 4:
+        if "encrypted_session_key_b64" not in obj:
+            raise ValueError("v4 package missing 'encrypted_session_key_b64'")
+        encrypted_session_key = un_b64(str(obj["encrypted_session_key_b64"]), field="encrypted_session_key_b64")
+        key_algorithm = str(obj.get("key_algorithm", ""))
+        rsa_key_size = int(obj.get("rsa_key_size", 0))
+    else:
+        if "encrypted_session_key_b64" in obj:
+            raise ValueError("only v4 packages carry 'encrypted_session_key_b64'")
+        encrypted_session_key = None
+        key_algorithm = None
+        rsa_key_size = None
+
     return {
         "version": version,
         "algorithm": obj["algorithm"],
@@ -160,6 +213,9 @@ def parse_package(obj: dict) -> dict:
         "kdf_context": str(obj["kdf_context"]),
         "os_random": os_random,
         "fish_commitment": fish_commitment,
+        "encrypted_session_key": encrypted_session_key,
+        "key_algorithm": key_algorithm,
+        "rsa_key_size": rsa_key_size,
         "nonce": un_b64(str(obj["nonce_b64"]), field="nonce_b64"),
         "aad": un_b64(str(obj["aad_b64"]), field="aad_b64"),
         "payload": un_b64(str(obj["payload_b64"]), field="payload_b64"),

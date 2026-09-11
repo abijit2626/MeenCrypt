@@ -6,3 +6,7 @@ dashboard/node_modules/
 dashboard/dist/
 *.pkg
 code.txt
+*.pem
+keys/
+usb/
+private_key*

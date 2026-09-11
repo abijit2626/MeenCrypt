@@ -1,0 +1,325 @@
+"""Tests for the RSA-OAEP hybrid pipeline (package version 4).
+
+Mirrors the style of test_api.py: same VALID fish fixture, same
+tamper-detection pattern via parse_package()/rebuilding a b64 field.
+"""
+
+from __future__ import annotations
+
+import base64
+import inspect
+import json
+import pathlib
+import sys
+
+import pytest
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+import cli as fishrand_cli  # noqa: E402  (needs REPO_ROOT on sys.path first)
+
+from fishrand import (  # noqa: E402
+    AuthenticationFailure,
+    decrypt_rsa_hybrid_package,
+    encrypt_with_fish_entropy,
+    encrypt_with_rsa_hybrid,
+)
+from fishrand.package import build_package, parse_package  # noqa: E402
+from fishrand.rsa_hybrid import (  # noqa: E402
+    RSA_KEY_SIZE,
+    RSA_PUBLIC_EXPONENT,
+    PrivateKeyNotFound,
+    generate_keypair,
+    load_private_key,
+    load_public_key,
+    serialize_private_key,
+    serialize_public_key,
+    unwrap_session_key,
+    wrap_session_key,
+)
+
+VALID = {
+    "schema_version": 1,
+    "source": "fish_vision",
+    "samples": [
+        {
+            "timestamp_ns": 500000000,
+            "position": {"x": 120.5, "y": 240.2},
+            "displacement": {"x": 3.2, "y": -1.4},
+            "acceleration": {"x": 0.8, "y": 0.2},
+        },
+        {
+            "timestamp_ns": 500100000,
+            "position": {"x": 125.0, "y": 238.0},
+            "displacement": {"x": 5.1, "y": -2.0},
+            "acceleration": {"x": 1.9, "y": -0.4},
+        },
+    ],
+}
+
+DIARY = b"BUY MILK, EGGS AND MAGGI"
+
+
+@pytest.fixture(scope="module")
+def keypair():
+    return generate_keypair()
+
+
+@pytest.fixture(scope="module")
+def other_keypair():
+    return generate_keypair()
+
+
+class TestKeyGeneration:
+    def test_key_size_and_exponent(self, keypair):
+        private_key, public_key = keypair
+        assert private_key.key_size == RSA_KEY_SIZE == 3072
+        assert public_key.public_numbers().e == RSA_PUBLIC_EXPONENT == 65537
+
+    def test_wrap_unwrap_roundtrip(self, keypair):
+        private_key, public_key = keypair
+        aes_key = b"\x01" * 32
+        wrapped = wrap_session_key(public_key, aes_key)
+        assert wrapped != aes_key
+        assert unwrap_session_key(private_key, wrapped) == aes_key
+
+    def test_pem_roundtrip_no_passphrase(self, keypair, tmp_path):
+        private_key, public_key = keypair
+        priv_path = tmp_path / "private_key.pem"
+        pub_path = tmp_path / "public_key.pem"
+        priv_path.write_bytes(serialize_private_key(private_key, None))
+        pub_path.write_bytes(serialize_public_key(public_key))
+        loaded_priv = load_private_key(priv_path)
+        loaded_pub = load_public_key(pub_path)
+        aes_key = b"\x02" * 32
+        wrapped = wrap_session_key(loaded_pub, aes_key)
+        assert unwrap_session_key(loaded_priv, wrapped) == aes_key
+
+    def test_pem_roundtrip_with_passphrase(self, keypair, tmp_path):
+        private_key, _ = keypair
+        priv_path = tmp_path / "private_key.pem"
+        priv_path.write_bytes(serialize_private_key(private_key, b"correct horse"))
+        loaded = load_private_key(priv_path, b"correct horse")
+        assert loaded.key_size == RSA_KEY_SIZE
+
+    def test_passphrase_required_when_missing(self, keypair, tmp_path):
+        private_key, _ = keypair
+        priv_path = tmp_path / "private_key.pem"
+        priv_path.write_bytes(serialize_private_key(private_key, b"correct horse"))
+        with pytest.raises(ValueError):
+            load_private_key(priv_path, None)
+
+    def test_wrong_passphrase_rejected(self, keypair, tmp_path):
+        private_key, _ = keypair
+        priv_path = tmp_path / "private_key.pem"
+        priv_path.write_bytes(serialize_private_key(private_key, b"correct horse"))
+        with pytest.raises(ValueError):
+            load_private_key(priv_path, b"wrong passphrase")
+
+    def test_missing_private_key_file_raises_and_creates_nothing(self, tmp_path):
+        missing = tmp_path / "does_not_exist.pem"
+        with pytest.raises(PrivateKeyNotFound):
+            load_private_key(missing)
+        assert not missing.exists()
+
+
+class TestHybridRoundtrip:
+    def test_encrypt_decrypt_roundtrip_without_fish_at_decrypt(self, keypair):
+        private_key, public_key = keypair
+        pkg = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        assert pkg["version"] == 4
+        assert decrypt_rsa_hybrid_package(pkg, private_key=private_key) == DIARY
+
+    def test_decrypt_signature_takes_no_fish_argument(self):
+        params = list(inspect.signature(decrypt_rsa_hybrid_package).parameters)
+        assert "fish_observations" not in params
+
+    def test_package_fields(self, keypair):
+        _, public_key = keypair
+        pkg = encrypt_with_rsa_hybrid(VALID, "hello", public_key=public_key)
+        assert pkg["key_algorithm"] == "RSA-OAEP-SHA256"
+        assert pkg["rsa_key_size"] == 3072
+        assert "encrypted_session_key_b64" in pkg
+        assert "os_random_b64" not in pkg
+        assert "fish_commitment_b64" not in pkg
+        assert "fish_hash" in pkg  # retained as audit metadata only
+
+    def test_wrong_private_key_rejected(self, keypair, other_keypair):
+        _, public_key = keypair
+        wrong_private_key, _ = other_keypair
+        pkg = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        with pytest.raises(AuthenticationFailure):
+            decrypt_rsa_hybrid_package(pkg, private_key=wrong_private_key)
+
+    def test_fresh_nonce_and_session_key_each_time(self, keypair):
+        _, public_key = keypair
+        pkg_a = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        pkg_b = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        assert pkg_a["nonce_b64"] != pkg_b["nonce_b64"]
+        assert pkg_a["encrypted_session_key_b64"] != pkg_b["encrypted_session_key_b64"]
+        assert pkg_a["payload_b64"] != pkg_b["payload_b64"]
+
+    def test_fish_repetition_does_not_weaken_key(self, keypair):
+        """Same fish window across two encryptions still yields distinct
+        ciphertexts/session keys - the fresh OS CSPRNG dominates, not the
+        (possibly idle/repeated) fish observations."""
+        _, public_key = keypair
+        pkg_a = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        pkg_b = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        assert pkg_a["fish_hash"] == pkg_b["fish_hash"]
+        assert pkg_a["payload_b64"] != pkg_b["payload_b64"]
+
+    def test_minimal_fish_dataset_handled_safely(self, keypair):
+        private_key, public_key = keypair
+        minimal = {"schema_version": 1, "source": "fish_vision", "samples": [VALID["samples"][0]]}
+        pkg = encrypt_with_rsa_hybrid(minimal, DIARY, public_key=public_key)
+        assert decrypt_rsa_hybrid_package(pkg, private_key=private_key) == DIARY
+
+
+class TestTamperDetection:
+    def test_tampered_ciphertext_raises(self, keypair):
+        private_key, public_key = keypair
+        pkg = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        decoded = parse_package(pkg)
+        blob = bytearray(decoded["payload"])
+        blob[len(blob) // 2] ^= 0x01
+        pkg["payload_b64"] = base64.b64encode(bytes(blob)).decode()
+        with pytest.raises(AuthenticationFailure):
+            decrypt_rsa_hybrid_package(pkg, private_key=private_key)
+
+    def test_tampered_nonce_raises(self, keypair):
+        private_key, public_key = keypair
+        pkg = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        decoded = parse_package(pkg)
+        nonce = bytearray(decoded["nonce"])
+        nonce[0] ^= 0x01
+        pkg["nonce_b64"] = base64.b64encode(bytes(nonce)).decode()
+        with pytest.raises(AuthenticationFailure):
+            decrypt_rsa_hybrid_package(pkg, private_key=private_key)
+
+    def test_tampered_aad_raises(self, keypair):
+        private_key, public_key = keypair
+        pkg = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        decoded = parse_package(pkg)
+        aad = bytearray(decoded["aad"])
+        aad[-1] = ord("!") if aad[-1] != ord("!") else ord("?")
+        pkg["aad_b64"] = base64.b64encode(bytes(aad)).decode()
+        with pytest.raises(AuthenticationFailure):
+            decrypt_rsa_hybrid_package(pkg, private_key=private_key)
+
+    def test_tampered_encrypted_session_key_raises(self, keypair):
+        private_key, public_key = keypair
+        pkg = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        decoded = parse_package(pkg)
+        wrapped = bytearray(decoded["encrypted_session_key"])
+        wrapped[0] ^= 0x01
+        pkg["encrypted_session_key_b64"] = base64.b64encode(bytes(wrapped)).decode()
+        with pytest.raises(AuthenticationFailure):
+            decrypt_rsa_hybrid_package(pkg, private_key=private_key)
+
+
+class TestPackageValidation:
+    def test_v4_requires_encrypted_session_key(self, keypair):
+        _, public_key = keypair
+        pkg = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        del pkg["encrypted_session_key_b64"]
+        with pytest.raises(ValueError):
+            parse_package(pkg)
+
+    def test_v4_rejects_os_random(self, keypair):
+        _, public_key = keypair
+        pkg = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        pkg["os_random_b64"] = base64.b64encode(b"\x00" * 32).decode()
+        with pytest.raises(ValueError):
+            parse_package(pkg)
+
+    def test_only_v4_carries_encrypted_session_key(self):
+        pkg = encrypt_with_fish_entropy(VALID, DIARY)
+        pkg["encrypted_session_key_b64"] = base64.b64encode(b"\x00" * 32).decode()
+        with pytest.raises(ValueError):
+            parse_package(pkg)
+
+    def test_build_package_rejects_conflicting_secrets(self):
+        with pytest.raises(ValueError):
+            build_package(
+                fish_hash="a" * 64,
+                nonce=b"\x00" * 12,
+                ciphertext_blob=b"\x00" * 16,
+                aad=b"{}",
+                os_random=b"\x00" * 32,
+                kdf_context="x",
+                encrypted_session_key=b"\x00" * 32,
+            )
+
+
+class TestEvents:
+    def test_pipeline_emits_expected_steps(self, keypair):
+        private_key, public_key = keypair
+        events: list[str] = []
+        pkg = encrypt_with_rsa_hybrid(
+            VALID, DIARY, public_key=public_key,
+            emit=lambda *a: events.append(a[0]),
+        )
+        for step in (
+            "validation", "canonicalization", "conditioning",
+            "os_csprng", "kdf", "aes_gcm", "rsa_wrap", "package",
+        ):
+            assert step in events
+
+        dec_events: list[tuple] = []
+        decrypt_rsa_hybrid_package(
+            pkg, private_key=private_key,
+            emit=lambda *a: dec_events.append((a[0], a[1])),
+        )
+        assert ("rsa_unwrap", "ok") in dec_events
+        assert ("decrypt", "complete") in dec_events
+
+
+class TestCLIRoundtrip:
+    def test_keygen_encrypt_decrypt_roundtrip(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        keys_dir = tmp_path / "keys"
+        fish_path = tmp_path / "fish.json"
+        fish_path.write_text(json.dumps(VALID), encoding="utf-8")
+        out_path = tmp_path / "encrypted.pkg"
+
+        assert fishrand_cli.main(["keygen", "--output", str(keys_dir), "--no-passphrase"]) == 0
+        assert (keys_dir / "private_key.pem").exists()
+        assert (keys_dir / "public_key.pem").exists()
+
+        rc = fishrand_cli.main([
+            "encrypt", "--fish", str(fish_path), "--text", "BUY MILK, EGGS AND MAGGI",
+            "--public-key", str(keys_dir / "public_key.pem"), "--out", str(out_path),
+        ])
+        assert rc == 0
+        pkg = json.loads(out_path.read_text(encoding="utf-8"))
+        assert pkg["version"] == 4
+
+        decrypted_path = tmp_path / "decrypted.txt"
+        rc = fishrand_cli.main([
+            "decrypt", "--pkg", str(out_path),
+            "--private-key", str(keys_dir / "private_key.pem"),
+            "--out", str(decrypted_path),
+        ])
+        assert rc == 0
+        assert decrypted_path.read_text(encoding="utf-8") == "BUY MILK, EGGS AND MAGGI"
+
+    def test_decrypt_missing_private_key_fails_safely(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        keys_dir = tmp_path / "keys"
+        fish_path = tmp_path / "fish.json"
+        fish_path.write_text(json.dumps(VALID), encoding="utf-8")
+        out_path = tmp_path / "encrypted.pkg"
+
+        fishrand_cli.main(["keygen", "--output", str(keys_dir), "--no-passphrase"])
+        fishrand_cli.main([
+            "encrypt", "--fish", str(fish_path), "--text", "secret",
+            "--public-key", str(keys_dir / "public_key.pem"), "--out", str(out_path),
+        ])
+
+        missing_key = tmp_path / "usb_removed" / "private_key.pem"
+        rc = fishrand_cli.main(["decrypt", "--pkg", str(out_path), "--private-key", str(missing_key)])
+        assert rc == 1
+        assert not missing_key.exists()

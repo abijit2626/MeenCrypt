@@ -180,3 +180,81 @@ def test_empty_fish_list_canonicalization():
         {"timestamp": 1.0, "fish_count": 0, "activity_pct": 0.0, "fish": []},
     ]}
     assert b'"fish",[]' in canonical_bytes(validate_observations(empty))
+
+
+# --- Audio (ESP32 mic "readings") ------------------------------------------
+
+from fishrand.schema import AUDIO_SCHEMA_VERSION, AUDIO_SOURCE_IDENTIFIER  # noqa: E402
+
+AUDIO = {
+    "schema_version": AUDIO_SCHEMA_VERSION,
+    "source": AUDIO_SOURCE_IDENTIFIER,
+    "window_duration_s": 5.0,
+    "readings": [
+        {"offset_s": 0.0, "value": 12345},
+        {"offset_s": 1.2, "value": 12890},
+    ],
+}
+
+
+def _audio_with_permuted_keys():
+    data = json.loads(json.dumps(AUDIO))
+    return {
+        "source": data["source"],
+        "schema_version": data["schema_version"],
+        "readings": [
+            {"value": r["value"], "offset_s": r["offset_s"]} for r in data["readings"]
+        ],
+        "window_duration_s": data["window_duration_s"],
+    }
+
+
+def test_audio_same_data_same_bytes():
+    a = canonical_bytes(validate_observations(AUDIO))
+    b = canonical_bytes(validate_observations(_audio_with_permuted_keys()))
+    assert a == b
+
+
+def test_audio_different_data_different_bytes():
+    altered = json.loads(json.dumps(AUDIO))
+    altered["readings"][0]["value"] += 1
+    assert canonical_bytes(validate_observations(AUDIO)) != canonical_bytes(
+        validate_observations(altered)
+    )
+
+
+def test_audio_changed_offset_changes_bytes():
+    altered = json.loads(json.dumps(AUDIO))
+    altered["readings"][0]["offset_s"] += 0.001
+    assert canonical_bytes(validate_observations(AUDIO)) != canonical_bytes(
+        validate_observations(altered)
+    )
+
+
+def test_audio_changed_window_duration_changes_bytes():
+    altered = json.loads(json.dumps(AUDIO))
+    altered["window_duration_s"] += 1.0
+    assert canonical_bytes(validate_observations(AUDIO)) != canonical_bytes(
+        validate_observations(altered)
+    )
+
+
+def test_audio_canonical_embeds_version_and_source():
+    blob = canonical_bytes(validate_observations(AUDIO))
+    assert b'"schema_version",1,"source","esp32_mic","window_duration_s"' in blob
+
+
+def test_audio_fixed_field_ordering_per_reading():
+    blob = canonical_bytes(validate_observations(AUDIO)).decode("utf-8")
+    assert blob.index('"offset_s"') < blob.index('"value"')
+
+
+def test_audio_bytes_disjoint_from_fish_bytes():
+    # Same physical numbers, different shape -> must not collide.
+    fish_like = {"schema_version": 1, "source": "fish_vision", "samples": [
+        {"timestamp_ns": 0, "position": {"x": 0.0, "y": 0.0},
+         "displacement": {"x": 0.0, "y": 0.0}, "acceleration": {"x": 0.0, "y": 0.0}},
+    ]}
+    assert canonical_bytes(validate_observations(AUDIO)) != canonical_bytes(
+        validate_observations(fish_like)
+    )

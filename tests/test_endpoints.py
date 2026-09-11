@@ -131,11 +131,27 @@ class TestCollectOnDemandEncrypt:
                        "speed": 2.0, "direction_rad": 0.4}]},
         ]}
 
+    def _v2_window_good(self):
+        """Strong-activity fish window that classify_fish_quality() rates
+        GOOD (>= 2 fish, >= 5% activity) - _v2_window() alone (1 fish,
+        4-5% activity) is only MEDIUM under the fish/audio classifier, and
+        a MEDIUM-quality window now requires audio (see fishrand/api.py
+        encrypt_with_observation), so the fish-only 'code alone is enough'
+        tests below need a window strong enough to skip the audio path."""
+        window = self._v2_window()
+        for frame in window["frames"]:
+            frame["activity_pct"] = 20.0
+            frame["fish_count"] = 2
+            frame["fish"].append(
+                {"id": 1, "centroid": [50.0, 60.0], "area": 90.0, "speed": 1.5, "direction_rad": 0.1}
+            )
+        return window
+
     def test_encrypt_with_code_makes_v3_package(self):
         sse = _parse_sse(client.post("/api/encrypt", json={
             "plaintext": "code secret",
             "code": "ab" * 32,
-            "fish_json": self._v2_window(),
+            "fish_json": self._v2_window_good(),
         }).text)
         done = sse["done"][0]
         assert done["status"] == "encrypted"
@@ -150,7 +166,7 @@ class TestCollectOnDemandEncrypt:
         sse = _parse_sse(client.post("/api/encrypt", json={
             "plaintext": "the fish guards the diary",
             "code": code,
-            "fish_json": self._v2_window(),
+            "fish_json": self._v2_window_good(),
         }).text)
         pkg = sse["done"][0]["package"]
 

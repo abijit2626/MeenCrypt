@@ -13,11 +13,10 @@ class FishrandError(Exception):
 
 
 class AuthenticationFailure(FishrandError):
-    """A cryptographic check failed - AES-GCM tag verification, a fish
-    commitment/hash mismatch, or an RSA-OAEP unwrap failure. Data was
-    tampered with, or the key/nonce/AAD/commitment do not match. Callers
-    must treat the payload as untrusted; plaintext is never returned on
-    failure."""
+    """A cryptographic check failed - AES-GCM tag verification or an
+    RSA-OAEP unwrap failure. Data was tampered with, or the private
+    key/nonce/AAD do not match. Callers must treat the payload as
+    untrusted; plaintext is never returned on failure."""
 
 
 __all__ = ["FishrandError", "AuthenticationFailure"]

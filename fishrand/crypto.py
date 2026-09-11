@@ -28,10 +28,10 @@ NONCE_SIZE = 12
 TAG_SIZE = 16
 
 # Purpose tag embedded in AAD (see spec Part 9).
-AAD_PURPOSE = "FISHRAND-DEMO"
+AAD_PURPOSE = "FISHRAND-DIARY-V1"
 
 
-def canonical_aad(*, version: int = 1, algorithm: str = ALGORITHM, purpose: str = AAD_PURPOSE) -> bytes:
+def canonical_aad(*, version: int = 4, algorithm: str = ALGORITHM, purpose: str = AAD_PURPOSE) -> bytes:
     """Deterministic canonical AAD bytes.
 
     Same fixed key ordering, UTF-8, minimal separators. Any change to these

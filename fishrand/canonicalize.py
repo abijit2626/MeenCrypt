@@ -22,7 +22,13 @@ from __future__ import annotations
 import json
 import math
 
-from .schema import SCHEMA_VERSION, SOURCE_IDENTIFIER, TRACK_SCHEMA_VERSION
+from .schema import (
+    AUDIO_SCHEMA_VERSION,
+    AUDIO_SOURCE_IDENTIFIER,
+    SCHEMA_VERSION,
+    SOURCE_IDENTIFIER,
+    TRACK_SCHEMA_VERSION,
+)
 
 # Fixed top-level key order for the canonical envelope.
 _ORDER_TOP: tuple[str, ...] = ("schema_version", "source", "samples")
@@ -48,6 +54,16 @@ _CANONICAL_TRACK_TAG = (
     f'["schema_version",{TRACK_SCHEMA_VERSION},'
     f'"source","{SOURCE_IDENTIFIER}",'
     '"frames"'
+).encode("utf-8")
+
+# Audio (ESP32 mic) ordering.
+_ORDER_AUDIO: tuple[str, ...] = ("schema_version", "source", "window_duration_s", "readings")
+_ORDER_READING: tuple[str, ...] = ("offset_s", "value")
+
+_CANONICAL_AUDIO_TAG = (
+    f'["schema_version",{AUDIO_SCHEMA_VERSION},'
+    f'"source","{AUDIO_SOURCE_IDENTIFIER}",'
+    '"window_duration_s"'
 ).encode("utf-8")
 
 
@@ -159,6 +175,40 @@ def _canonical_track_bytes(data: dict) -> bytes:
     )
 
 
+def _reading_bytes(reading: dict) -> bytes:
+    """Serialize one audio reading with fixed ordering."""
+    return (
+        '["offset_s",'
+        f"{canonical_number(reading['offset_s'])},"
+        '"value",'
+        f"{canonical_number(reading['value'])}]"
+    ).encode("utf-8")
+
+
+def _readings_bytes(readings: list) -> bytes:
+    return b"[" + b",".join(_reading_bytes(r) for r in readings) + b"]"
+
+
+def _canonical_audio_bytes(data: dict) -> bytes:
+    """Serialize validated audio observation data to canonical bytes."""
+    return (
+        _CANONICAL_AUDIO_TAG
+        + b","
+        + canonical_number(data["window_duration_s"]).encode("utf-8")
+        + b',"readings",'
+        + _readings_bytes(data["readings"])
+        + b"]"
+    )
+
+
+def reading_bytes(reading: dict) -> bytes:
+    """Canonical bytes for one audio reading (mirrors frame_bytes/sample_bytes).
+
+    The input reading MUST have passed validate_observations().
+    """
+    return _reading_bytes(reading)
+
+
 def frame_bytes(frame: dict) -> bytes:
     """Canonical bytes for one v2 vision frame.
 
@@ -180,11 +230,13 @@ def sample_bytes(sample: dict) -> bytes:
 def canonical_bytes(data: dict) -> bytes:
     """Serialize validated observation data to canonical bytes.
 
-    Dispatches on shape: `frames` (v2 vision track) or `samples` (v1). The
-    input MUST have passed validate_observations().
+    Dispatches on shape: `frames` (v2 vision track), `readings` (audio), or
+    `samples` (v1). The input MUST have passed validate_observations().
     """
     if "frames" in data:
         return _canonical_track_bytes(data)
+    if "readings" in data:
+        return _canonical_audio_bytes(data)
     return _canonical_v1_bytes(data)
 
 

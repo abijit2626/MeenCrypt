@@ -260,3 +260,113 @@ def test_v2_canonicalize_deterministic_across_formatting(track):
     b = canonicalize_observations(_json.loads(_json.dumps(track, sort_keys=True, separators=(",", ":"))))
     c = canonicalize_observations(track)
     assert a == b == c
+
+
+# --- Audio (ESP32 mic "readings") ------------------------------------------
+
+from fishrand.schema import AUDIO_SCHEMA_VERSION, AUDIO_SOURCE_IDENTIFIER  # noqa: E402
+
+AUDIO = {
+    "schema_version": AUDIO_SCHEMA_VERSION,
+    "source": AUDIO_SOURCE_IDENTIFIER,
+    "window_duration_s": 5.0,
+    "readings": [
+        {"offset_s": 0.0, "value": 12345},
+        {"offset_s": 1.2, "value": 12890},
+        {"offset_s": 2.4, "value": 11920},
+    ],
+}
+
+
+@pytest.fixture
+def audio():
+    return json.loads(json.dumps(AUDIO))
+
+
+def test_audio_valid_passes(audio):
+    assert validate_observations(audio) == audio
+
+
+def test_audio_wrong_schema_version(audio):
+    audio["schema_version"] = 99
+    with pytest.raises(SchemaError):
+        validate_observations(audio)
+
+
+def test_audio_wrong_source(audio):
+    audio["source"] = "some_other_mic"
+    with pytest.raises(SchemaError):
+        validate_observations(audio)
+
+
+def test_audio_missing_readings(audio):
+    del audio["readings"]
+    with pytest.raises(SchemaError):
+        validate_observations(audio)
+
+
+def test_audio_empty_readings_rejected(audio):
+    audio["readings"] = []
+    with pytest.raises(SchemaError):
+        validate_observations(audio)
+
+
+def test_audio_too_many_readings_rejected():
+    from fishrand.schema import MAX_READINGS
+
+    data = json.loads(json.dumps(AUDIO))
+    data["readings"] = [data["readings"][0]] * (MAX_READINGS + 1)
+    with pytest.raises(SchemaError):
+        validate_observations(data)
+
+
+def test_audio_negative_value_rejected(audio):
+    audio["readings"][0]["value"] = -1
+    with pytest.raises(SchemaError):
+        validate_observations(audio)
+
+
+def test_audio_non_numeric_value_rejected(audio):
+    audio["readings"][0]["value"] = "twelve"
+    with pytest.raises(SchemaError):
+        validate_observations(audio)
+
+
+def test_audio_value_out_of_bounds_rejected(audio):
+    from fishrand.schema import AUDIO_VALUE_MAX
+
+    audio["readings"][0]["value"] = AUDIO_VALUE_MAX + 1
+    with pytest.raises(SchemaError):
+        validate_observations(audio)
+
+
+def test_audio_missing_offset_rejected(audio):
+    del audio["readings"][0]["offset_s"]
+    with pytest.raises(SchemaError):
+        validate_observations(audio)
+
+
+def test_audio_unexpected_reading_key_rejected(audio):
+    audio["readings"][0]["extra"] = 1
+    with pytest.raises(SchemaError):
+        validate_observations(audio)
+
+
+def test_audio_unexpected_top_level_key_rejected(audio):
+    audio["eval_payload"] = "danger"
+    with pytest.raises(SchemaError):
+        validate_observations(audio)
+
+
+def test_audio_missing_window_duration_rejected(audio):
+    del audio["window_duration_s"]
+    with pytest.raises(SchemaError):
+        validate_observations(audio)
+
+
+def test_audio_dispatch_does_not_collide_with_fish_shapes(audio):
+    # A "readings" top-level key must never be mistaken for v1 "samples"
+    # or v2 "frames" - and vice versa.
+    assert "samples" not in audio and "frames" not in audio
+    with pytest.raises(SchemaError):
+        validate_observations({"schema_version": 1, "source": "fish_vision"})

@@ -16,6 +16,11 @@ Two accepted shapes (validated against the same contract):
                 {timestamp, fish_count, activity_pct, fish:[{id, centroid,
                 area, speed, direction_rad}]}.
 
+  AUDIO (READINGS)  independent AUDIO_SCHEMA_VERSION — one window of ESP32 +
+                INMP441 Sound_Level readings read over USB serial (see
+                server/audio_serial.py): {schema_version, source,
+                window_duration_s, readings:[{offset_s, value}]}.
+
 Public interface (matching the spec):
 
     load_observations(path)
@@ -38,6 +43,12 @@ SCHEMA_VERSION: int = 1
 # v2: vision-track frames (friend's vision.py output).
 TRACK_SCHEMA_VERSION: int = 2
 SOURCE_IDENTIFIER: str = "fish_vision"
+
+# v3 (audio): ESP32 + INMP441 Sound_Level readings, one logical window.
+# Independent version space from the fish SCHEMA_VERSION/TRACK_SCHEMA_VERSION
+# above - this counts audio schema revisions, not fish ones.
+AUDIO_SCHEMA_VERSION: int = 1
+AUDIO_SOURCE_IDENTIFIER: str = "esp32_mic"
 
 MAX_SAMPLES: int = 10_000
 MIN_SAMPLES: int = 1
@@ -84,6 +95,30 @@ REQUIRED_TOP_LEVEL: tuple[str, ...] = ("schema_version", "source", "samples")
 TRACK_TOP_LEVEL: tuple[str, ...] = ("schema_version", "source", "frames")
 FRAME_FIELDS: tuple[str, ...] = ("timestamp", "fish_count", "activity_pct", "fish")
 FISH_FIELDS: tuple[str, ...] = ("id", "centroid", "area", "speed", "direction_rad")
+
+# Audio (ESP32 mic) field sets/bounds. One window = readings collected over
+# a bounded elapsed-time capture (see server/audio_serial.py), not a
+# historical log like the fish frames.
+AUDIO_TOP_LEVEL: tuple[str, ...] = ("schema_version", "source", "window_duration_s", "readings")
+READING_FIELDS: tuple[str, ...] = ("offset_s", "value")
+
+MIN_READINGS: int = 1
+MAX_READINGS: int = 100_000
+
+# Sound_Level bounds: the ESP32 firmware's exact formula is opaque (out of
+# scope to redesign), and the sample values quoted in the integration spec
+# were ~11920-13102, so a tight bound around that range would be guessing.
+# These are deliberately generous, named bounds that only reject clearly
+# impossible values (negative, or absurdly large from a corrupted line).
+AUDIO_VALUE_MIN: int = 0
+AUDIO_VALUE_MAX: int = 1_000_000
+
+# Per-reading offset (seconds since window start) and declared window
+# duration bounds. Mirrors the v2 TIMESTAMP_SEC_* style above.
+AUDIO_OFFSET_MIN: float = 0.0
+AUDIO_OFFSET_MAX: float = 3_600.0
+AUDIO_WINDOW_DURATION_MIN: float = 0.0
+AUDIO_WINDOW_DURATION_MAX: float = 3_600.0
 
 
 class SchemaError(ValueError):
@@ -309,14 +344,68 @@ def _validate_track(data: Any) -> dict:
     return data
 
 
+def _validate_reading(reading: Any, index: int) -> None:
+    reading = _require_dict(reading, f"readings[{index}]")
+    unknown = set(reading) - set(READING_FIELDS)
+    if unknown:
+        raise SchemaError(f"readings[{index}]: unexpected key(s): {sorted(unknown)}")
+
+    offset = reading.get("offset_s")
+    if offset is None:
+        raise SchemaError(f"readings[{index}]: missing required field 'offset_s'")
+    off = _require_number(offset, f"readings[{index}].offset_s")
+    if not AUDIO_OFFSET_MIN <= off <= AUDIO_OFFSET_MAX:
+        raise SchemaError(f"readings[{index}].offset_s: {off} out of range")
+
+    value = reading.get("value")
+    if value is None:
+        raise SchemaError(f"readings[{index}]: missing required field 'value'")
+    _require_int(value, f"readings[{index}].value", AUDIO_VALUE_MIN, AUDIO_VALUE_MAX)
+
+
+def _validate_audio(data: Any) -> dict:
+    """Validate the audio contract: a window of ESP32 Sound_Level readings."""
+    _require_dict(data, "top level")
+    unknown = set(data) - set(AUDIO_TOP_LEVEL)
+    if unknown:
+        raise SchemaError(f"top level: unexpected key(s): {sorted(unknown)}")
+    missing = [field for field in AUDIO_TOP_LEVEL if field not in data]
+    if missing:
+        raise SchemaError(f"top level: missing required field(s): {missing}")
+
+    if data.get("schema_version") != AUDIO_SCHEMA_VERSION:
+        raise SchemaError(
+            f"schema_version: expected {AUDIO_SCHEMA_VERSION}, got {data.get('schema_version')!r}"
+        )
+    if data.get("source") != AUDIO_SOURCE_IDENTIFIER:
+        raise SchemaError(f"source: expected {AUDIO_SOURCE_IDENTIFIER!r}, got {data.get('source')!r}")
+
+    window_duration = data.get("window_duration_s")
+    wd = _require_number(window_duration, "window_duration_s")
+    if not AUDIO_WINDOW_DURATION_MIN <= wd <= AUDIO_WINDOW_DURATION_MAX:
+        raise SchemaError(f"window_duration_s: {wd} out of range")
+
+    if not isinstance(data["readings"], list):
+        raise SchemaError(f"readings: expected list, got {type(data['readings']).__name__}")
+
+    readings = data["readings"]
+    if not MIN_READINGS <= len(readings) <= MAX_READINGS:
+        raise SchemaError(f"readings: count {len(readings)} outside [{MIN_READINGS}, {MAX_READINGS}]")
+
+    for index, reading in enumerate(readings):
+        _validate_reading(reading, index)
+
+    return data
+
+
 def validate_observations(data: Any) -> dict:
     """Validate an already-parsed object against the FISHRAND input contract.
 
     Dispatches on shape: `frames` → v2 vision-track, `samples` → v1 motion
-    samples. Returns a deeply-validated copy of the data (the input object
-    is never mutated, and mutating the result cannot affect any other
-    reference to the original). Raises SchemaError on any violation. Never
-    executes or evaluates anything from the payload.
+    samples, `readings` → audio (ESP32 mic). Returns a deeply-validated copy
+    of the data (the input object is never mutated, and mutating the result
+    cannot affect any other reference to the original). Raises SchemaError
+    on any violation. Never executes or evaluates anything from the payload.
     """
     _require_dict(data, "top level")
     data = copy.deepcopy(data)
@@ -324,7 +413,11 @@ def validate_observations(data: Any) -> dict:
         return _validate_track(data)
     if "samples" in data:
         return _validate_observations_v1(data)
-    raise SchemaError("top level: must contain either 'samples' (v1) or 'frames' (v2 vision track)")
+    if "readings" in data:
+        return _validate_audio(data)
+    raise SchemaError(
+        "top level: must contain 'samples' (v1), 'frames' (v2 vision track), or 'readings' (audio)"
+    )
 
 
 def load_observations(path: str | pathlib.Path) -> dict:

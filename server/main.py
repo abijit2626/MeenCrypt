@@ -3,26 +3,32 @@
 The dashboard triggers encryption; this server collects the fish
 observations itself (see server.collector) at encrypt time.
 
+The security model: the server keeps only the RSA PUBLIC key, so it can
+encrypt but can never decrypt. Unlocking always requires the caller to
+supply their own private key PEM, which is used in memory for that one
+request and never written to disk.
+
 Endpoints:
     GET  /api/health           liveness + version
     GET  /api/events           persistent SSE stream: fish_update events
     POST /api/observations     push channel for the vision engine's output
     GET  /api/observations/current
-    POST /api/encrypt          body {plaintext, code?}; server collects the
-                               fish, binds it into the package (SSE). When a
-                               universal USB code is supplied a v2 package is
-                               produced (no secret embedded).
-    POST /api/decrypt          body {package, code?}; uses the fish bound in
-                               the package, verifies GCM tag (SSE). v2
-                               packages require the USB code.
+    POST /api/keys/generate    body {force?}; makes an RSA-3072 keypair,
+                               stores ONLY the public key, and returns the
+                               private key PEM as a download (never saved).
+    POST /api/encrypt          body {plaintext}; server collects the fish
+                               (plus ESP32 audio when the fish are too
+                               still) and encrypts for its public key (SSE).
+    POST /api/decrypt          body {package, private_key_pem}; unwraps with
+                               the caller's key, verifies GCM tag (SSE).
     GET  /api/diary            current state of the diary app's ONE
                                persistent encrypted document on this PC
                                (ciphertext + metadata only - never plaintext).
-    POST /api/diary/save       body {plaintext, code?}; encrypts (same path
-                               as /api/encrypt) and OVERWRITES the stored
+    POST /api/diary/save       body {plaintext}; encrypts (same path as
+                               /api/encrypt) and OVERWRITES the stored
                                document on disk (SSE).
-    POST /api/diary/unlock     body {code?}; decrypts the stored document
-                               in place using its own bound fish window (SSE).
+    POST /api/diary/unlock     body {private_key_pem}; decrypts the stored
+                               document in place (SSE).
 
 Run:  uvicorn server.main:app --reload --port 8000
 """
@@ -32,33 +38,42 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
-import pathlib
+import os
 import threading
 from typing import Any, AsyncIterator
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 import fishrand
 from fishrand import (
     AuthenticationFailure,
-    decrypt_package,
-    encrypt_with_fish_entropy,
+    decrypt_rsa_hybrid_package,
+    encrypt_with_observation,
 )
 from fishrand.observe import count_observations, observation_stats
 from fishrand.package import save_package
+from fishrand.rsa_hybrid import (
+    generate_keypair,
+    load_private_key_from_pem,
+    load_public_key,
+    serialize_private_key,
+    serialize_public_key,
+)
 from fishrand.schema import SchemaError, validate_observations
 
 from . import config
+from .audio_serial import SerialReaderError
 from .collector import FishSourceError, collect_fish_verbose, current_source, _normalize_raw
 
 app = FastAPI(title="FISHRAND", version=fishrand.__version__)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=config.CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -119,13 +134,13 @@ async def _sse_broadcast() -> AsyncIterator[dict]:
 class FishRequest(BaseModel):
     plaintext: str | None = None
     fish_json: dict | None = Field(default=None, description="optional override for tests")
-    code: str | None = Field(default=None, description="universal USB code (hex); omit for v1 demo")
+    audio_json: dict | None = Field(default=None, description="optional audio override for tests")
+    no_audio: bool = Field(default=False, description="skip ESP32 audio capture entirely")
 
 
 class DecryptRequest(BaseModel):
     package: dict | None = None
-    fish_json: dict | None = Field(default=None, description="optional override for tests")
-    code: str | None = Field(default=None, description="universal USB code (hex) for v2 packages")
+    private_key_pem: str | None = Field(default=None, description="your RSA private key PEM")
 
 
 class ObservationsRequest(BaseModel):
@@ -134,25 +149,39 @@ class ObservationsRequest(BaseModel):
 
 class DiarySaveRequest(BaseModel):
     plaintext: str
-    code: str | None = Field(default=None, description="universal USB code (hex); omit to rely on FISHRAND_USB_CODE")
+    no_audio: bool = Field(default=False, description="skip ESP32 audio capture entirely")
 
 
 class DiaryUnlockRequest(BaseModel):
-    code: str | None = Field(default=None, description="universal USB code (hex); omit to rely on FISHRAND_USB_CODE")
+    private_key_pem: str | None = Field(default=None, description="your RSA private key PEM")
+
+
+class GenerateKeysRequest(BaseModel):
+    force: bool = Field(default=False, description="regenerate even if a public key already exists")
 
 
 # --------------------------------------------------------------------------
-# code resolution
+# key handling - public key on disk, private keys only ever in a request
 # --------------------------------------------------------------------------
-def _configured_code() -> str | None:
-    """Return the universal USB code text, or None if no code is set."""
-    path = config.USB_CODE
-    if not path:
-        return None
-    p = pathlib.Path(path)
-    if p.exists():
-        return p.read_text(encoding="utf-8").strip() or None
-    return None
+def _server_public_key():
+    """Load the server's RSA public key, or 409 if none has been made yet."""
+    if not config.PUBLIC_KEY_PATH.exists():
+        raise HTTPException(
+            status_code=409,
+            detail="no encryption key yet — generate a keypair first (POST /api/keys/generate)",
+        )
+    return load_public_key(config.PUBLIC_KEY_PATH)
+
+
+def _caller_private_key(private_key_pem: str | None):
+    """Parse a caller-supplied private key PEM. Used in memory only - it is
+    never written to disk, logged, or cached."""
+    if not private_key_pem or not private_key_pem.strip():
+        raise HTTPException(status_code=422, detail="private_key_pem is required to decrypt")
+    try:
+        return load_private_key_from_pem(private_key_pem)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 # --------------------------------------------------------------------------
@@ -218,23 +247,69 @@ def _resolve_fish(fish_json: dict | None) -> tuple[dict, str]:
     return collect_fish_verbose()
 
 
-def _run_encrypt(fish_data: dict, source: str, plaintext: str, code: str | None) -> tuple[list[dict], dict]:
+def _resolve_audio(no_audio: bool, audio_json: dict | None) -> tuple[dict | None, str]:
+    """Resolve the audio window for this encryption, mirroring _resolve_fish.
+
+    Priority: explicit override -> live ESP32 capture (if configured) ->
+    None. Never raises - an unavailable/unconfigured ESP32 just means no
+    audio for this session, and encrypt_with_observation() turns that into
+    a clear error only if the fish quality actually required audio.
+    """
+    if audio_json is not None:
+        return audio_json, "override:request"
+    if no_audio:
+        return None, "disabled:no_audio"
+    if not config.AUDIO_SERIAL_PORT:
+        return None, "unconfigured"
+    from .audio_serial import ESP32SerialReader, SerialReaderConfig, to_audio_observation
+
+    cfg = SerialReaderConfig(
+        port=config.AUDIO_SERIAL_PORT,
+        baud_rate=config.AUDIO_BAUD_RATE,
+        window_duration_s=config.AUDIO_WINDOW_DURATION_S,
+        min_readings=config.AUDIO_MIN_READINGS,
+    )
+    try:
+        with ESP32SerialReader(cfg) as reader:
+            readings = reader.read_window()
+    except SerialReaderError as exc:
+        return None, f"unavailable:{exc}"
+    return to_audio_observation(readings, window_duration_s=cfg.window_duration_s), f"live:{config.AUDIO_SERIAL_PORT}"
+
+
+def _run_encrypt(
+    fish_data: dict, source: str, plaintext: str, code: str | None, audio_data: dict | None = None,
+    audio_source: str = "unconfigured",
+) -> tuple[list[dict], dict]:
     """Shared encrypt body for /api/encrypt and /api/diary/save.
 
     Returns (pipeline_events, package). Raises SchemaError/ValueError on
-    invalid fish data or plaintext (caller maps to a 422).
+    invalid fish data or plaintext (caller maps to a 422) - including when
+    fish quality requires audio that wasn't available.
     """
     events: list[dict] = [{
         "step": "collect",
         "status": "ok",
-        "detail": {"source": source, "units": count_observations(fish_data)},
+        "detail": {"source": source, "units": count_observations(fish_data), "audio_source": audio_source},
     }]
-    package = encrypt_with_fish_entropy(
-        fish_data,
-        plaintext,
-        session_code=code,
-        emit=lambda *a: events.append(_to_event(a)),
-    )
+    if code:
+        # v5 (fish/audio observation-mode) never embeds a secret, so mode
+        # selection only applies with a USB code; without one this stays
+        # the untouched v1 self-contained demo path (audio doesn't apply).
+        package = encrypt_with_observation(
+            fish_data,
+            plaintext,
+            audio_observations=audio_data,
+            session_code=code,
+            emit=lambda *a: events.append(_to_event(a)),
+        )
+    else:
+        package = encrypt_with_fish_entropy(
+            fish_data,
+            plaintext,
+            session_code=None,
+            emit=lambda *a: events.append(_to_event(a)),
+        )
     # Bind the fish window into the package so decrypt uses the SAME fish.
     package["metadata"]["fish_observations"] = fish_data
     package["metadata"]["fish_source"] = source
@@ -269,6 +344,41 @@ def _run_decrypt(fish_data: dict, package: dict, source: str, bound: str, code: 
     return events, {"status": "decrypted", "plaintext": plaintext.decode("utf-8")}
 
 
+def _run_decrypt_v5(
+    package: dict, fish_data: dict | None, audio_data: dict | None, code: str | None
+) -> tuple[list[dict], dict]:
+    """Shared v5 (observation-mode) decrypt body for /api/decrypt and
+    /api/diary/unlock. Mirrors _run_decrypt's contract: never raises
+    AuthenticationFailure/ObservationModeMismatch (converted to a
+    "rejected" status), may raise SchemaError/ValueError for the caller to
+    map to a 422."""
+    events: list[dict] = [{
+        "step": "collect",
+        "status": "ok",
+        "detail": {
+            "observation_mode": package.get("observation_mode"),
+            "fish": fish_data is not None,
+            "audio": audio_data is not None,
+        },
+    }]
+    try:
+        plaintext = decrypt_observation_package(
+            package,
+            fish_observations=fish_data,
+            audio_observations=audio_data,
+            session_code=code,
+            emit=lambda *a: events.append(_to_event(a)),
+        )
+    except (AuthenticationFailure, ObservationModeMismatch) as exc:
+        events.append({
+            "step": "aes_gcm",
+            "status": "error",
+            "detail": {"reason": "REJECTED", "message": str(exc)},
+        })
+        return events, {"status": "rejected", "reason": str(exc)}
+    return events, {"status": "decrypted", "plaintext": plaintext.decode("utf-8")}
+
+
 @app.post("/api/encrypt")
 def encrypt_endpoint(body: FishRequest) -> EventSourceResponse:
     if body.plaintext is None or body.plaintext == "":
@@ -278,10 +388,11 @@ def encrypt_endpoint(body: FishRequest) -> EventSourceResponse:
         fish_data, source = _resolve_fish(body.fish_json)
     except FishSourceError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    audio_data, audio_source = _resolve_audio(body.no_audio, body.audio_json)
 
     code = body.code or _configured_code()
     try:
-        events, package = _run_encrypt(fish_data, source, body.plaintext, code)
+        events, package = _run_encrypt(fish_data, source, body.plaintext, code, audio_data, audio_source)
     except (SchemaError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -292,6 +403,16 @@ def encrypt_endpoint(body: FishRequest) -> EventSourceResponse:
 def decrypt_endpoint(body: DecryptRequest) -> EventSourceResponse:
     if body.package is None:
         raise HTTPException(status_code=422, detail="package is required")
+
+    if body.package.get("version") == 5:
+        fish_data = body.fish_json if body.fish_json is not None else body.package.get("metadata", {}).get("fish_observations")
+        audio_data = body.audio_json if body.audio_json is not None else body.package.get("metadata", {}).get("audio_observations")
+        code = body.code or _configured_code()
+        try:
+            events, final = _run_decrypt_v5(body.package, fish_data, audio_data, code)
+        except (SchemaError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return _sse_from_events(events, final)
 
     if body.fish_json is not None:
         fish_data, fish_source, bound = body.fish_json, "override:request", "override"
@@ -359,10 +480,11 @@ def diary_save(body: DiarySaveRequest) -> EventSourceResponse:
         fish_data, source = _resolve_fish(None)
     except FishSourceError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    audio_data, audio_source = _resolve_audio(body.no_audio, None)
 
     code = body.code or _configured_code()
     try:
-        events, package = _run_encrypt(fish_data, source, body.plaintext, code)
+        events, package = _run_encrypt(fish_data, source, body.plaintext, code, audio_data, audio_source)
     except (SchemaError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -387,6 +509,17 @@ def diary_unlock(body: DiaryUnlockRequest) -> EventSourceResponse:
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=500, detail=f"stored diary is unreadable: {exc}") from exc
 
+    code = body.code or _configured_code()
+
+    if package.get("version") == 5:
+        fish_data = package.get("metadata", {}).get("fish_observations")
+        audio_data = package.get("metadata", {}).get("audio_observations")
+        try:
+            events, final = _run_decrypt_v5(package, fish_data, audio_data, code)
+        except (SchemaError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return _sse_from_events(events, final)
+
     bound_data = package.get("metadata", {}).get("fish_observations")
     if bound_data is None:
         raise HTTPException(
@@ -395,7 +528,6 @@ def diary_unlock(body: DiaryUnlockRequest) -> EventSourceResponse:
         )
     fish_source = package.get("metadata", {}).get("fish_source", "package")
 
-    code = body.code or _configured_code()
     try:
         events, final = _run_decrypt(bound_data, package, fish_source, "package", code)
     except (SchemaError, ValueError) as exc:

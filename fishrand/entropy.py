@@ -36,3 +36,42 @@ def condition_observations(data: dict) -> bytes:
     Returns the 32-byte fish_digest.
     """
     return fish_digest_bytes(validate_observations(data))
+
+
+def audio_digest_bytes(validated: dict) -> bytes:
+    """SHA-256 of the canonical audio observation stream (32 bytes).
+
+    Reuses the same canonical_bytes() dispatch as fish_digest_bytes() - the
+    audio ('readings') shape is just a third branch of that dispatch, so no
+    audio-specific hashing logic is needed. Same conditioning warning
+    applies: this is compression, not an entropy source.
+    """
+    return hashlib.sha256(canonical_bytes(validated)).digest()
+
+
+def audio_digest_hex(validated: dict) -> str:
+    """Hex digest for display/logging."""
+    return audio_digest_bytes(validated).hex()
+
+
+# Domain separator for combining fish_digest + audio_digest into one
+# observation_digest (MEDIUM fish-quality mode: fish + audio together).
+# Distinct from any mixing.py *_INFO string - this tag separates the
+# *combination* of two digests from their later use as HKDF input.
+OBSERVATION_DOMAIN_TAG = b"FISHRAND-observation-combine-v1"
+
+
+def combined_observation_digest(fish_digest: bytes, audio_digest: bytes) -> bytes:
+    """Domain-separated combination of a fish_digest and an audio_digest.
+
+    combined = SHA-256(OBSERVATION_DOMAIN_TAG || fish_digest || audio_digest)
+
+    Used only for MEDIUM fish-quality sessions (fish + audio together).
+    Like fish_digest/audio_digest, this is conditioning/binding material,
+    never a secret - the USB code remains the only secret.
+    """
+    if len(fish_digest) != 32:
+        raise ValueError(f"fish_digest must be 32 bytes, got {len(fish_digest)}")
+    if len(audio_digest) != 32:
+        raise ValueError(f"audio_digest must be 32 bytes, got {len(audio_digest)}")
+    return hashlib.sha256(OBSERVATION_DOMAIN_TAG + fish_digest + audio_digest).digest()

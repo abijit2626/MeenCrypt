@@ -1,8 +1,9 @@
-"""RSA-OAEP HYBRID KEY WRAPPING (package version 4).
+"""RSA-OAEP HYBRID KEY WRAPPING (package version 4) - the only scheme.
 
-Adds a long-term RSA-3072 keypair on top of the existing FISHRAND pipeline:
+A long-term RSA-3072 keypair wraps every message's session key:
 
-    fish_digest (SHA-256, conditioning only - never a decryption gate)
+    observation digest (SHA-256 of fish, fish+audio, or audio -
+    conditioning only, never a decryption gate)
             +
     fresh OS CSPRNG bytes (cspng.session_random_32)
             |
@@ -20,11 +21,11 @@ AES-256-GCM     RSA-OAEP wrap(public key)
             v
       v4 package (see fishrand/package.py)
 
-Decryption needs ONLY the RSA private key + the package - the fish window
-is never required again (unlike v1/v2/v3). `fish_hash` is retained in the
-v4 package purely as AUDIT metadata ("physical activity was present at
-encryption time") and is never re-checked at decrypt time; it is not a
-security property of this mode.
+Decryption needs ONLY the RSA private key + the package - the fish/audio
+window is never required again. `fish_hash` (and the fish_quality /
+observation_mode / audio_hash entries in the package metadata) are AUDIT
+metadata ("this is what the tank looked like at encryption time"); they
+are never re-checked at decrypt time and are not a security property.
 
 Key management:
     - RSA-3072, public exponent 65537.
@@ -104,6 +105,29 @@ def serialize_public_key(public_key: rsa.RSAPublicKey) -> bytes:
     )
 
 
+def _load_private_key_from_data(
+    data: bytes, passphrase: bytes | None, *, source_desc: str
+) -> rsa.RSAPrivateKey:
+    """Parse PEM private-key bytes, wrapping library errors uniformly.
+
+    Shared by load_private_key (from disk) and load_private_key_from_pem
+    (in memory) so both report failures identically.
+    """
+    try:
+        key = serialization.load_pem_private_key(data, password=passphrase)
+    except TypeError as exc:
+        raise ValueError(
+            "RSA private key is passphrase-protected; supply the correct passphrase"
+        ) from exc
+    except ValueError as exc:
+        raise ValueError(
+            f"RSA private key ({source_desc}) is invalid or the passphrase is wrong: {exc}"
+        ) from exc
+    if not isinstance(key, rsa.RSAPrivateKey):
+        raise ValueError(f"key ({source_desc}) is not an RSA private key")
+    return key
+
+
 def load_private_key(path: str | pathlib.Path, passphrase: bytes | None = None) -> rsa.RSAPrivateKey:
     """Load a PEM RSA private key from `path`.
 
@@ -118,17 +142,19 @@ def load_private_key(path: str | pathlib.Path, passphrase: bytes | None = None) 
         data = p.read_bytes()
     except OSError as exc:
         raise PrivateKeyNotFound(f"RSA private key at {p} could not be read: {exc}") from exc
-    try:
-        key = serialization.load_pem_private_key(data, password=passphrase)
-    except TypeError as exc:
-        raise ValueError(
-            "RSA private key is passphrase-protected; supply the correct passphrase"
-        ) from exc
-    except ValueError as exc:
-        raise ValueError(f"RSA private key at {p} is invalid or the passphrase is wrong: {exc}") from exc
-    if not isinstance(key, rsa.RSAPrivateKey):
-        raise ValueError(f"key at {p} is not an RSA private key")
-    return key
+    return _load_private_key_from_data(data, passphrase, source_desc=str(p))
+
+
+def load_private_key_from_pem(
+    pem_text: str | bytes, passphrase: bytes | None = None
+) -> rsa.RSAPrivateKey:
+    """Load a PEM RSA private key straight from memory - never touches disk.
+
+    This is what lets the server accept a private key the browser uploads
+    for one unlock request without ever persisting it.
+    """
+    data = pem_text.encode("utf-8") if isinstance(pem_text, str) else pem_text
+    return _load_private_key_from_data(data, passphrase, source_desc="in-memory PEM")
 
 
 def load_public_key(path: str | pathlib.Path) -> rsa.RSAPublicKey:
@@ -171,6 +197,7 @@ __all__ = [
     "serialize_private_key",
     "serialize_public_key",
     "load_private_key",
+    "load_private_key_from_pem",
     "load_public_key",
     "wrap_session_key",
     "unwrap_session_key",

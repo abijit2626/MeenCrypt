@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "source": "fish_vision",
+  "frames": [
+    {
+      "timestamp": 1750000000.0,
+      "fish_count": 1,
+      "activity_pct": 4.2,
+      "fish": [
+        {"id": 0, "centroid": [120.5, 240.2], "area": 320.5, "speed": 3.2, "direction_rad": 0.2}
+      ]
+    },
+    {
+      "timestamp": 1750000005.0,
+      "fish_count": 1,
+      "activity_pct": 6.1,
+      "fish": [
+        {"id": 0, "centroid": [125.0, 238.0], "area": 331.0, "speed": 5.1, "direction_rad": -0.4}
+      ]
+    },
+    {
+      "timestamp": 1750000010.0,
+      "fish_count": 1,
+      "activity_pct": 3.8,
+      "fish": [
+        {"id": 0, "centroid": [131.5, 235.5], "area": 318.0, "speed": 6.5, "direction_rad": -0.5}
+      ]
+    },
+    {
+      "timestamp": 1750000015.0,
+      "fish_count": 1,
+      "activity_pct": 2.4,
+      "fish": [
+        {"id": 0, "centroid": [138.0, 232.0], "area": 305.2, "speed": 6.5, "direction_rad": -1.0}
+      ]
+    },
+    {
+      "timestamp": 1750000020.0,
+      "fish_count": 2,
+      "activity_pct": 9.7,
+      "fish": [
+        {"id": 0, "centroid": [146.0, 228.0], "area": 302.8, "speed": 8.0, "direction_rad": -0.6},
+        {"id": 1, "centroid": [60.0, 400.0], "area": 210.4, "speed": 3.4, "direction_rad": 1.1}
+      ]
+    },
+    {
+      "timestamp": 1750000025.0,
+      "fish_count": 1,
+      "activity_pct": 5.0,
+      "fish": [
+        {"id": 0, "centroid": [154.0, 224.0], "area": 289.1, "speed": 8.0, "direction_rad": -0.4}
+      ]
+    },
+    {
+      "timestamp": 1750000030.0,
+      "fish_count": 1,
+      "activity_pct": 4.5,
+      "fish": [
+        {"id": 0, "centroid": [158.0, 223.0], "area": 277.6, "speed": 4.0, "direction_rad": -1.2}
+      ]
+    },
+    {
+      "timestamp": 1750000035.0,
+      "fish_count": 1,
+      "activity_pct": 7.2,
+      "fish": [
+        {"id": 0, "centroid": [154.0, 225.5], "area": 271.0, "speed": 4.7, "direction_rad": 2.2}
+      ]
+    },
+    {
+      "timestamp": 1750000040.0,
+      "fish_count": 1,
+      "activity_pct": 3.1,
+      "fish": [
+        {"id": 0, "centroid": [147.0, 230.0], "area": 260.3, "speed": 8.1, "direction_rad": 2.4}
+      ]
+    },
+    {
+      "timestamp": 1750000045.0,
+      "fish_count": 1,
+      "activity_pct": 2.9,
+      "fish": [
+        {"id": 0, "centroid": [143.0, 233.0], "area": 255.0, "speed": 5.0, "direction_rad": 2.1}
+      ]
+    },
+    {
+      "timestamp": 1750000050.0,
+      "fish_count": 1,
+      "activity_pct": 4.0,
+      "fish": [
+        {"id": 0, "centroid": [144.5, 234.5], "area": 258.8, "speed": 2.1, "direction_rad": 0.8}
+      ]
+    },
+    {
+      "timestamp": 1750000055.0,
+      "fish_count": 1,
+      "activity_pct": 5.5,
+      "fish": [
+        {"id": 0, "centroid": [151.0, 238.0], "area": 266.4, "speed": 7.0, "direction_rad": 0.3}
+      ]
+    }
+  ]
+}

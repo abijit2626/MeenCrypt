@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "source": "fish_vision",
+  "samples": [
+    {
+      "timestamp_ns": 500000000,
+      "position": {"x": 120.5, "y": 240.2},
+      "displacement": {"x": 3.2, "y": -1.4},
+      "acceleration": {"x": 0.8, "y": 0.2}
+    },
+    {
+      "timestamp_ns": 500100000,
+      "position": {"x": 125.0, "y": 238.0},
+      "displacement": {"x": 5.1, "y": -2.0},
+      "acceleration": {"x": 1.9, "y": -0.4}
+    },
+    {
+      "timestamp_ns": 500200000,
+      "position": {"x": 131.5, "y": 235.5},
+      "displacement": {"x": 6.5, "y": -2.5},
+      "acceleration": {"x": 1.4, "y": -0.5}
+    },
+    {
+      "timestamp_ns": 500300000,
+      "position": {"x": 138.0, "y": 232.0},
+      "displacement": {"x": 6.5, "y": -3.5},
+      "acceleration": {"x": 0.0, "y": -1.0}
+    },
+    {
+      "timestamp_ns": 500400000,
+      "position": {"x": 146.0, "y": 228.0},
+      "displacement": {"x": 8.0, "y": -4.0},
+      "acceleration": {"x": 1.5, "y": -0.5}
+    },
+    {
+      "timestamp_ns": 500500000,
+      "position": {"x": 154.0, "y": 224.0},
+      "displacement": {"x": 8.0, "y": -4.0},
+      "acceleration": {"x": 0.0, "y": 0.0}
+    },
+    {
+      "timestamp_ns": 500600000,
+      "position": {"x": 158.0, "y": 223.0},
+      "displacement": {"x": 4.0, "y": -1.0},
+      "acceleration": {"x": -4.0, "y": 3.0}
+    },
+    {
+      "timestamp_ns": 500700000,
+      "position": {"x": 154.0, "y": 225.5},
+      "displacement": {"x": -4.0, "y": 2.5},
+      "acceleration": {"x": -8.0, "y": 3.5}
+    },
+    {
+      "timestamp_ns": 500800000,
+      "position": {"x": 147.0, "y": 230.0},
+      "displacement": {"x": -7.0, "y": 4.5},
+      "acceleration": {"x": -3.0, "y": 2.0}
+    },
+    {
+      "timestamp_ns": 500900000,
+      "position": {"x": 143.0, "y": 233.0},
+      "displacement": {"x": -4.0, "y": 3.0},
+      "acceleration": {"x": 3.0, "y": -1.5}
+    },
+    {
+      "timestamp_ns": 501000000,
+      "position": {"x": 144.5, "y": 234.5},
+      "displacement": {"x": 1.5, "y": 1.5},
+      "acceleration": {"x": 5.5, "y": -1.5}
+    },
+    {
+      "timestamp_ns": 501100000,
+      "position": {"x": 151.0, "y": 238.0},
+      "displacement": {"x": 6.5, "y": 3.5},
+      "acceleration": {"x": 5.0, "y": 2.0}
+    }
+  ]
+}

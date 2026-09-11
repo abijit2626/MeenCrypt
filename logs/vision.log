@@ -1,0 +1,448 @@
+[ WARN:0@0.391] global cap_v4l.cpp:914 open VIDEOIO(V4L2:/dev/video2): can't open camera by index
+[ WARN:0@0.395] global cap_v4l.cpp:914 open VIDEOIO(V4L2:/dev/video3): can't open camera by index
+[ WARN:0@0.395] global cap.cpp:435 open VIDEOIO(FFMPEG): raised OpenCV exception:
+
+OpenCV(5.0.0) /io/opencv/modules/videoio/src/cap_ffmpeg_impl.hpp:1243: error: (-2:Unspecified error) in function 'bool CvCapture_FFMPEG::open(const char*, int, const cv::Ptr<cv::IStreamReader>&, const cv::VideoCaptureParameters&)'
+> VIDEOIO/FFMPEG: Camera index out of range (expected: 'index < device_list->nb_devices'), where
+>     'index' is 3
+> must be less than
+>     'device_list->nb_devices' is 3
+
+
+[ERROR:0@0.396] global obsensor_uvc_stream_channel.cpp:163 getStreamChannelGroup Camera index out of range
+[ WARN:0@0.396] global cap_v4l.cpp:914 open VIDEOIO(V4L2:/dev/video4): can't open camera by index
+[ WARN:0@0.396] global cap.cpp:435 open VIDEOIO(FFMPEG): raised OpenCV exception:
+
+OpenCV(5.0.0) /io/opencv/modules/videoio/src/cap_ffmpeg_impl.hpp:1243: error: (-2:Unspecified error) in function 'bool CvCapture_FFMPEG::open(const char*, int, const cv::Ptr<cv::IStreamReader>&, const cv::VideoCaptureParameters&)'
+> VIDEOIO/FFMPEG: Camera index out of range (expected: 'index < device_list->nb_devices'), where
+>     'index' is 4
+> must be less than
+>     'device_list->nb_devices' is 3
+
+
+[ERROR:0@0.396] global obsensor_uvc_stream_channel.cpp:163 getStreamChannelGroup Camera index out of range
+QFontDatabase: Cannot find font directory /home/guts/Documents/useless_proj/meencryt/.venv/lib/python3.14/site-packages/cv2/qt/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QFontDatabase: Cannot find font directory /home/guts/Documents/useless_proj/meencryt/.venv/lib/python3.14/site-packages/cv2/qt/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QFontDatabase: Cannot find font directory /home/guts/Documents/useless_proj/meencryt/.venv/lib/python3.14/site-packages/cv2/qt/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QFontDatabase: Cannot find font directory /home/guts/Documents/useless_proj/meencryt/.venv/lib/python3.14/site-packages/cv2/qt/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+QFontDatabase: Cannot find font directory /home/guts/Documents/useless_proj/meencryt/.venv/lib/python3.14/site-packages/cv2/qt/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+Scanning camera indices...
+Index 0: OK, frame read
+Index 1: OK, frame read
+Index 2: OK, frame read
+Index 3: not available
+Index 4: not available
+Running. Focus the preview window and use q/+/-/t/m/s/d.
+
+[JSON LOG] {"timestamp": 1789160480.641478, "fish_count": 2, "activity_pct": 0.88, "fish": [{"id": 26, "centroid": [629.4, 44.3], "area": 1542.5, "speed": 4.45, "direction_rad": 1.76}, {"id": 21, "centroid": [437.9, 335.1], "area": 307.5, "speed": 0.48, "direction_rad": -2.67}]}
+
+[JSON LOG] {"timestamp": 1789160485.6569462, "fish_count": 7, "activity_pct": 3.92, "fish": [{"id": 40, "centroid": [335.2, 320.2], "area": 5911.0, "speed": 2.39, "direction_rad": 0.69}, {"id": 21, "centroid": [508.3, 362.1], "area": 2085.5, "speed": 3.06, "direction_rad": -0.2}, {"id": 50, "centroid": [559.7, 214.8], "area": 805.5, "speed": 1.08, "direction_rad": 0.42}, {"id": 41, "centroid": [603.9, 41.3], "area": 422.0, "speed": 0.91, "direction_rad": 2.63}, {"id": 51, "centroid": [470.9, 39.7], "area": 410.5, "speed": 3.79, "direction_rad": -0.06}, {"id": 46, "centroid": [345.6, 52.1], "area": 350.5, "speed": 0.53, "direction_rad": 1.75}, {"id": 47, "centroid": [305.8, 477.3], "area": 258.5, "speed": 2.34, "direction_rad": 3.14}]}
+
+[JSON LOG] {"timestamp": 1789160490.6825929, "fish_count": 3, "activity_pct": 0.91, "fish": [{"id": 40, "centroid": [338.7, 303.2], "area": 807.5, "speed": 3.82, "direction_rad": -0.23}, {"id": 57, "centroid": [568.4, 284.3], "area": 680.0, "speed": 2.08, "direction_rad": -2.86}, {"id": 62, "centroid": [242.3, 314.1], "area": 240.5, "speed": 0.9, "direction_rad": -0.03}]}
+
+[JSON LOG] {"timestamp": 1789160495.6951797, "fish_count": 7, "activity_pct": 1.72, "fish": [{"id": 72, "centroid": [224.7, 317.9], "area": 2354.0, "speed": 1.44, "direction_rad": 2.36}, {"id": 68, "centroid": [408.0, 336.8], "area": 802.5, "speed": 0.88, "direction_rad": -1.3}, {"id": 62, "centroid": [363.0, 406.2], "area": 499.0, "speed": 2.83, "direction_rad": 0.14}, {"id": 66, "centroid": [364.2, 350.6], "area": 340.0, "speed": 1.88, "direction_rad": 0.18}, {"id": 40, "centroid": [462.0, 331.8], "area": 260.0, "speed": 0.87, "direction_rad": 2.55}, {"id": 67, "centroid": [408.2, 306.4], "area": 154.5, "speed": 118.67, "direction_rad": 0.34}, {"id": 73, "centroid": [444.9, 341.6], "area": 152.0, "speed": 0.0, "direction_rad": 0.0}]}
+
+[JSON LOG] {"timestamp": 1789160500.7090404, "fish_count": 2, "activity_pct": 1.38, "fish": [{"id": 76, "centroid": [526.6, 190.7], "area": 3550.5, "speed": 1.2, "direction_rad": -0.0}, {"id": 73, "centroid": [627.6, 336.9], "area": 290.0, "speed": 0.77, "direction_rad": 0.06}]}
+
+[JSON LOG] {"timestamp": 1789160505.7140083, "fish_count": 3, "activity_pct": 2.2, "fish": [{"id": 91, "centroid": [56.5, 272.3], "area": 4680.5, "speed": 8.41, "direction_rad": 1.41}, {"id": 94, "centroid": [547.7, 272.7], "area": 1242.5, "speed": 4.08, "direction_rad": 2.48}, {"id": 84, "centroid": [159.8, 303.4], "area": 174.0, "speed": 0.71, "direction_rad": 2.15}]}
+
+[JSON LOG] {"timestamp": 1789160510.7229795, "fish_count": 4, "activity_pct": 2.18, "fish": [{"id": 91, "centroid": [449.7, 323.0], "area": 5257.5, "speed": 7.37, "direction_rad": -0.24}, {"id": 95, "centroid": [276.3, 299.4], "area": 304.5, "speed": 0.58, "direction_rad": 1.97}, {"id": 106, "centroid": [296.0, 320.7], "area": 179.5, "speed": 0.79, "direction_rad": -3.06}, {"id": 105, "centroid": [302.8, 352.2], "area": 175.5, "speed": 10.17, "direction_rad": 2.97}]}
+
+[JSON LOG] {"timestamp": 1789160515.7529733, "fish_count": 2, "activity_pct": 0.5, "fish": [{"id": 111, "centroid": [508.4, 334.6], "area": 779.5, "speed": 5.32, "direction_rad": 2.77}, {"id": 107, "centroid": [539.2, 275.7], "area": 311.0, "speed": 1.09, "direction_rad": -0.71}]}
+
+[JSON LOG] {"timestamp": 1789160520.792843, "fish_count": 1, "activity_pct": 0.12, "fish": [{"id": 117, "centroid": [189.5, 307.3], "area": 153.0, "speed": 1.13, "direction_rad": 1.57}]}
+
+[JSON LOG] {"timestamp": 1789160525.8311229, "fish_count": 3, "activity_pct": 1.01, "fish": [{"id": 122, "centroid": [216.1, 361.9], "area": 993.0, "speed": 2.61, "direction_rad": 0.4}, {"id": 124, "centroid": [341.4, 230.3], "area": 801.5, "speed": 2.61, "direction_rad": 2.99}, {"id": 114, "centroid": [233.5, 389.9], "area": 570.5, "speed": 2.06, "direction_rad": -0.35}]}
+
+[JSON LOG] {"timestamp": 1789160530.8507125, "fish_count": 5, "activity_pct": 1.11, "fish": [{"id": 122, "centroid": [241.4, 247.2], "area": 1616.5, "speed": 14.57, "direction_rad": -0.09}, {"id": 114, "centroid": [503.2, 362.8], "area": 513.5, "speed": 4.14, "direction_rad": -0.08}, {"id": 125, "centroid": [526.2, 291.4], "area": 348.5, "speed": 1.43, "direction_rad": -2.85}, {"id": 129, "centroid": [169.7, 309.4], "area": 297.5, "speed": 0.97, "direction_rad": 2.52}, {"id": 130, "centroid": [169.4, 439.1], "area": 212.0, "speed": 0.0, "direction_rad": 0.0}]}
+
+[JSON LOG] {"timestamp": 1789160535.8658285, "fish_count": 1, "activity_pct": 0.25, "fish": [{"id": 128, "centroid": [624.7, 200.1], "area": 488.0, "speed": 1.32, "direction_rad": -2.0}]}
+
+[JSON LOG] {"timestamp": 1789160540.884674, "fish_count": 3, "activity_pct": 1.61, "fish": [{"id": 132, "centroid": [566.3, 310.3], "area": 2457.5, "speed": 3.56, "direction_rad": 2.92}, {"id": 141, "centroid": [548.6, 419.0], "area": 1350.0, "speed": 0.74, "direction_rad": -1.94}, {"id": 128, "centroid": [611.3, 20.9], "area": 692.0, "speed": 4.89, "direction_rad": 2.44}]}
+
+[JSON LOG] {"timestamp": 1789160545.8872566, "fish_count": 4, "activity_pct": 1.18, "fish": [{"id": 144, "centroid": [436.0, 273.6], "area": 1399.5, "speed": 5.1, "direction_rad": 2.91}, {"id": 145, "centroid": [251.2, 401.4], "area": 782.5, "speed": 1.58, "direction_rad": -2.44}, {"id": 143, "centroid": [251.4, 331.9], "area": 341.0, "speed": 0.72, "direction_rad": -2.61}, {"id": 148, "centroid": [632.2, 294.0], "area": 225.5, "speed": 0.48, "direction_rad": 0.44}]}
+
+[JSON LOG] {"timestamp": 1789160550.8947604, "fish_count": 7, "activity_pct": 1.45, "fish": [{"id": 151, "centroid": [570.3, 254.3], "area": 1399.5, "speed": 2.2, "direction_rad": -1.97}, {"id": 155, "centroid": [425.1, 289.6], "area": 687.0, "speed": 7.01, "direction_rad": -3.02}, {"id": 145, "centroid": [176.1, 303.0], "area": 608.0, "speed": 1.77, "direction_rad": 3.09}, {"id": 152, "centroid": [193.9, 211.4], "area": 366.0, "speed": 3.94, "direction_rad": -2.08}, {"id": 146, "centroid": [623.2, 238.0], "area": 252.5, "speed": 1.06, "direction_rad": -0.74}, {"id": 156, "centroid": [433.6, 321.1], "area": 183.0, "speed": 0.93, "direction_rad": -2.38}, {"id": 144, "centroid": [624.2, 334.5], "area": 168.0, "speed": 15.86, "direction_rad": -0.43}]}
+
+[JSON LOG] {"timestamp": 1789160555.9204338, "fish_count": 4, "activity_pct": 5.32, "fish": [{"id": 151, "centroid": [207.4, 263.0], "area": 14169.5, "speed": 7.07, "direction_rad": -3.14}, {"id": 157, "centroid": [107.2, 321.0], "area": 652.0, "speed": 1.98, "direction_rad": 2.63}, {"id": 155, "centroid": [393.1, 329.8], "area": 500.5, "speed": 2.84, "direction_rad": 0.39}, {"id": 158, "centroid": [357.9, 342.7], "area": 441.5, "speed": 2.59, "direction_rad": 0.62}]}
+
+[JSON LOG] {"timestamp": 1789160560.9652648, "fish_count": 2, "activity_pct": 2.25, "fish": [{"id": 161, "centroid": [499.5, 180.0], "area": 4116.5, "speed": 2.86, "direction_rad": -1.9}, {"id": 162, "centroid": [246.6, 296.7], "area": 2401.5, "speed": 1.61, "direction_rad": -0.2}]}
+
+[JSON LOG] {"timestamp": 1789160565.972043, "fish_count": 3, "activity_pct": 0.77, "fish": [{"id": 166, "centroid": [613.4, 210.2], "area": 1649.0, "speed": 8.9, "direction_rad": 0.75}, {"id": 162, "centroid": [527.8, 304.4], "area": 225.5, "speed": 1.84, "direction_rad": 0.18}, {"id": 167, "centroid": [634.0, 252.8], "area": 165.0, "speed": 0.0, "direction_rad": 0.0}]}
+
+[JSON LOG] {"timestamp": 1789160571.001839, "fish_count": 5, "activity_pct": 1.64, "fish": [{"id": 173, "centroid": [567.0, 401.7], "area": 1481.0, "speed": 2.58, "direction_rad": 0.44}, {"id": 171, "centroid": [499.2, 357.5], "area": 1268.0, "speed": 1.91, "direction_rad": 2.69}, {"id": 175, "centroid": [285.7, 404.0], "area": 1008.0, "speed": 1.05, "direction_rad": 0.4}, {"id": 174, "centroid": [285.9, 347.4], "area": 457.0, "speed": 1.54, "direction_rad": 0.14}, {"id": 169, "centroid": [615.3, 348.9], "area": 208.5, "speed": 0.74, "direction_rad": 2.24}]}
+
+[JSON LOG] {"timestamp": 1789160576.0233417, "fish_count": 2, "activity_pct": 1.33, "fish": [{"id": 183, "centroid": [373.2, 330.9], "area": 2257.5, "speed": 1.97, "direction_rad": 2.81}, {"id": 179, "centroid": [531.7, 309.9], "area": 1615.5, "speed": 4.71, "direction_rad": 2.93}]}
+
+[JSON LOG] {"timestamp": 1789160581.0540404, "fish_count": 2, "activity_pct": 3.13, "fish": [{"id": 186, "centroid": [204.0, 277.2], "area": 8800.0, "speed": 2.44, "direction_rad": -2.72}, {"id": 183, "centroid": [58.0, 324.9], "area": 173.0, "speed": 0.4, "direction_rad": -2.58}]}
+
+[JSON LOG] {"timestamp": 1789160586.0886605, "fish_count": 0, "activity_pct": 0.06, "fish": []}
+
+[JSON LOG] {"timestamp": 1789160591.0958142, "fish_count": 2, "activity_pct": 0.5, "fish": [{"id": 219, "centroid": [626.8, 87.3], "area": 1046.5, "speed": 16.28, "direction_rad": 1.78}, {"id": 218, "centroid": [360.6, 322.8], "area": 301.5, "speed": 0.84, "direction_rad": -0.03}]}
+
+[JSON LOG] {"timestamp": 1789160596.102751, "fish_count": 0, "activity_pct": 0.06, "fish": []}
+
+[JSON LOG] {"timestamp": 1789160601.102949, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789160606.1699674, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789160611.1929336, "fish_count": 6, "activity_pct": 1.46, "fish": [{"id": 256, "centroid": [619.7, 159.8], "area": 1650.5, "speed": 4.94, "direction_rad": 2.37}, {"id": 249, "centroid": [502.9, 220.6], "area": 473.5, "speed": 97.49, "direction_rad": 1.58}, {"id": 243, "centroid": [625.9, 249.8], "area": 410.0, "speed": 9.93, "direction_rad": -1.96}, {"id": 245, "centroid": [491.8, 278.2], "area": 366.5, "speed": 1.03, "direction_rad": 1.73}, {"id": 240, "centroid": [498.8, 320.6], "area": 235.5, "speed": 138.35, "direction_rad": 2.86}, {"id": 224, "centroid": [285.0, 348.7], "area": 169.5, "speed": 13.42, "direction_rad": -3.12}]}
+
+[JSON LOG] {"timestamp": 1789160616.2188828, "fish_count": 6, "activity_pct": 1.56, "fish": [{"id": 259, "centroid": [124.1, 342.5], "area": 2517.5, "speed": 7.4, "direction_rad": -0.99}, {"id": 261, "centroid": [426.6, 336.2], "area": 758.0, "speed": 2.91, "direction_rad": 2.66}, {"id": 264, "centroid": [448.9, 360.5], "area": 310.5, "speed": 1.68, "direction_rad": 2.66}, {"id": 262, "centroid": [547.6, 373.7], "area": 259.0, "speed": 0.41, "direction_rad": 0.67}, {"id": 243, "centroid": [204.0, 390.1], "area": 215.0, "speed": 2.06, "direction_rad": -0.51}, {"id": 263, "centroid": [490.2, 310.1], "area": 212.0, "speed": 1.66, "direction_rad": 3.02}]}
+
+[JSON LOG] {"timestamp": 1789160621.232135, "fish_count": 7, "activity_pct": 2.13, "fish": [{"id": 263, "centroid": [276.2, 391.0], "area": 2102.5, "speed": 1.95, "direction_rad": -1.47}, {"id": 270, "centroid": [107.8, 400.3], "area": 1189.0, "speed": 7.06, "direction_rad": 0.4}, {"id": 272, "centroid": [15.2, 375.8], "area": 921.0, "speed": 0.58, "direction_rad": -0.92}, {"id": 271, "centroid": [308.0, 339.7], "area": 545.0, "speed": 2.93, "direction_rad": 2.98}, {"id": 273, "centroid": [365.6, 414.8], "area": 227.5, "speed": 8.53, "direction_rad": 0.29}, {"id": 269, "centroid": [77.8, 390.6], "area": 227.0, "speed": 68.91, "direction_rad": 2.31}, {"id": 262, "centroid": [237.8, 348.0], "area": 185.0, "speed": 15.55, "direction_rad": -1.13}]}
+
+[JSON LOG] {"timestamp": 1789160626.2440293, "fish_count": 1, "activity_pct": 0.24, "fish": [{"id": 270, "centroid": [138.1, 344.0], "area": 186.5, "speed": 1.35, "direction_rad": -0.11}]}
+
+[JSON LOG] {"timestamp": 1789160631.260226, "fish_count": 3, "activity_pct": 1.11, "fish": [{"id": 277, "centroid": [328.3, 418.0], "area": 1878.0, "speed": 3.64, "direction_rad": 0.19}, {"id": 270, "centroid": [147.2, 326.7], "area": 968.5, "speed": 3.95, "direction_rad": -0.02}, {"id": 279, "centroid": [6.5, 323.4], "area": 155.0, "speed": 0.74, "direction_rad": -2.57}]}
+
+[JSON LOG] {"timestamp": 1789160636.2718637, "fish_count": 2, "activity_pct": 0.69, "fish": [{"id": 277, "centroid": [593.9, 336.7], "area": 1056.5, "speed": 0.56, "direction_rad": -1.08}, {"id": 284, "centroid": [369.8, 376.3], "area": 574.5, "speed": 3.33, "direction_rad": -1.91}]}
+
+[JSON LOG] {"timestamp": 1789160641.3093, "fish_count": 4, "activity_pct": 1.25, "fish": [{"id": 294, "centroid": [513.0, 164.8], "area": 1096.0, "speed": 0.23, "direction_rad": -2.7}, {"id": 296, "centroid": [606.4, 161.8], "area": 1030.5, "speed": 0.86, "direction_rad": -2.63}, {"id": 295, "centroid": [484.8, 10.9], "area": 329.0, "speed": 0.66, "direction_rad": 2.27}, {"id": 289, "centroid": [621.7, 378.0], "area": 219.0, "speed": 0.96, "direction_rad": 0.04}]}
+
+[JSON LOG] {"timestamp": 1789160646.320133, "fish_count": 1, "activity_pct": 0.48, "fish": [{"id": 300, "centroid": [314.0, 338.4], "area": 1295.0, "speed": 3.64, "direction_rad": -0.2}]}
+
+[JSON LOG] {"timestamp": 1789160651.334191, "fish_count": 1, "activity_pct": 0.07, "fish": [{"id": 304, "centroid": [467.8, 385.2], "area": 174.0, "speed": 0.62, "direction_rad": -2.97}]}
+
+[JSON LOG] {"timestamp": 1789160656.3532603, "fish_count": 5, "activity_pct": 0.88, "fish": [{"id": 305, "centroid": [294.9, 416.4], "area": 847.5, "speed": 11.65, "direction_rad": 1.28}, {"id": 309, "centroid": [280.1, 384.4], "area": 476.0, "speed": 0.0, "direction_rad": 0.0}, {"id": 306, "centroid": [627.3, 429.1], "area": 418.5, "speed": 2.45, "direction_rad": 0.82}, {"id": 304, "centroid": [292.7, 354.3], "area": 233.0, "speed": 2.64, "direction_rad": 3.02}, {"id": 308, "centroid": [630.5, 466.1], "area": 153.0, "speed": 2.25, "direction_rad": 0.7}]}
+
+[JSON LOG] {"timestamp": 1789160661.3819966, "fish_count": 3, "activity_pct": 2.19, "fish": [{"id": 313, "centroid": [599.4, 320.3], "area": 5009.5, "speed": 11.16, "direction_rad": -0.51}, {"id": 304, "centroid": [80.2, 344.6], "area": 862.0, "speed": 7.94, "direction_rad": -2.75}, {"id": 311, "centroid": [10.9, 360.8], "area": 242.5, "speed": 0.65, "direction_rad": -0.32}]}
+
+[JSON LOG] {"timestamp": 1789160666.3943322, "fish_count": 4, "activity_pct": 1.7, "fish": [{"id": 313, "centroid": [289.3, 348.1], "area": 3227.5, "speed": 6.36, "direction_rad": 2.52}, {"id": 318, "centroid": [332.4, 314.6], "area": 488.0, "speed": 0.0, "direction_rad": 0.0}, {"id": 317, "centroid": [229.9, 390.2], "area": 434.5, "speed": 11.58, "direction_rad": -3.1}, {"id": 316, "centroid": [183.9, 428.8], "area": 234.5, "speed": 1.48, "direction_rad": 1.67}]}
+
+[JSON LOG] {"timestamp": 1789160671.4091365, "fish_count": 2, "activity_pct": 2.8, "fish": [{"id": 320, "centroid": [79.4, 105.6], "area": 5812.0, "speed": 3.17, "direction_rad": -1.51}, {"id": 326, "centroid": [184.7, 199.5], "area": 2071.0, "speed": 4.13, "direction_rad": 0.82}]}
+
+[JSON LOG] {"timestamp": 1789160676.412446, "fish_count": 10, "activity_pct": 14.23, "fish": [{"id": 339, "centroid": [351.6, 144.0], "area": 18932.0, "speed": 36.36, "direction_rad": -0.2}, {"id": 345, "centroid": [39.7, 99.4], "area": 5568.5, "speed": 47.89, "direction_rad": -1.2}, {"id": 341, "centroid": [608.1, 107.5], "area": 3335.5, "speed": 34.9, "direction_rad": -1.98}, {"id": 333, "centroid": [334.9, 334.5], "area": 2669.5, "speed": 8.04, "direction_rad": -0.12}, {"id": 334, "centroid": [13.9, 247.3], "area": 1823.5, "speed": 11.09, "direction_rad": -1.36}, {"id": 328, "centroid": [308.8, 471.0], "area": 1631.5, "speed": 3.67, "direction_rad": 0.57}, {"id": 330, "centroid": [182.5, 326.2], "area": 912.0, "speed": 17.94, "direction_rad": 1.04}, {"id": 331, "centroid": [203.6, 452.8], "area": 866.0, "speed": 5.7, "direction_rad": 2.42}, {"id": 343, "centroid": [143.1, 93.0], "area": 756.5, "speed": 143.24, "direction_rad": 0.6}, {"id": 342, "centroid": [498.6, 43.6], "area": 664.5, "speed": 23.69, "direction_rad": 1.83}]}
+
+[JSON LOG] {"timestamp": 1789160681.4482138, "fish_count": 1, "activity_pct": 0.61, "fish": [{"id": 348, "centroid": [350.9, 363.3], "area": 1427.0, "speed": 7.61, "direction_rad": -1.81}]}
+
+[JSON LOG] {"timestamp": 1789160686.468676, "fish_count": 7, "activity_pct": 0.93, "fish": [{"id": 358, "centroid": [473.5, 367.7], "area": 328.0, "speed": 2.85, "direction_rad": 2.5}, {"id": 352, "centroid": [310.2, 448.3], "area": 302.5, "speed": 1.23, "direction_rad": -2.37}, {"id": 357, "centroid": [310.4, 399.7], "area": 276.0, "speed": 0.74, "direction_rad": 0.43}, {"id": 351, "centroid": [351.7, 385.6], "area": 273.5, "speed": 2.43, "direction_rad": 2.29}, {"id": 360, "centroid": [289.4, 353.5], "area": 201.5, "speed": 0.79, "direction_rad": -0.08}, {"id": 353, "centroid": [287.5, 381.3], "area": 199.5, "speed": 0.86, "direction_rad": 0.48}, {"id": 362, "centroid": [532.6, 432.9], "area": 193.5, "speed": 0.0, "direction_rad": 0.0}]}
+
+[JSON LOG] {"timestamp": 1789160691.4978673, "fish_count": 3, "activity_pct": 0.7, "fish": [{"id": 360, "centroid": [493.2, 388.9], "area": 288.5, "speed": 7.01, "direction_rad": 2.96}, {"id": 358, "centroid": [338.0, 413.3], "area": 245.5, "speed": 7.61, "direction_rad": -2.92}, {"id": 352, "centroid": [508.1, 364.3], "area": 195.0, "speed": 0.79, "direction_rad": 1.76}]}
+
+[JSON LOG] {"timestamp": 1789160696.5037403, "fish_count": 4, "activity_pct": 0.91, "fish": [{"id": 363, "centroid": [590.0, 257.4], "area": 1080.0, "speed": 1.72, "direction_rad": -3.01}, {"id": 367, "centroid": [598.9, 356.6], "area": 725.5, "speed": 10.38, "direction_rad": -1.36}, {"id": 369, "centroid": [573.8, 332.7], "area": 283.5, "speed": 1.81, "direction_rad": -0.15}, {"id": 364, "centroid": [526.3, 353.5], "area": 186.0, "speed": 0.62, "direction_rad": 1.12}]}
+
+[JSON LOG] {"timestamp": 1789160701.5130122, "fish_count": 3, "activity_pct": 1.19, "fish": [{"id": 371, "centroid": [560.4, 197.4], "area": 2710.0, "speed": 8.11, "direction_rad": -1.32}, {"id": 364, "centroid": [630.2, 177.1], "area": 391.0, "speed": 5.81, "direction_rad": -1.98}, {"id": 372, "centroid": [595.2, 395.5], "area": 158.5, "speed": 0.46, "direction_rad": -2.23}]}
+
+[JSON LOG] {"timestamp": 1789160706.5311186, "fish_count": 2, "activity_pct": 0.75, "fish": [{"id": 388, "centroid": [623.4, 268.7], "area": 1756.0, "speed": 6.36, "direction_rad": -2.01}, {"id": 375, "centroid": [168.8, 338.9], "area": 202.5, "speed": 0.55, "direction_rad": 2.44}]}
+
+[JSON LOG] {"timestamp": 1789160711.548749, "fish_count": 6, "activity_pct": 0.85, "fish": [{"id": 393, "centroid": [89.2, 344.2], "area": 510.5, "speed": 1.19, "direction_rad": 2.99}, {"id": 395, "centroid": [429.6, 467.3], "area": 372.5, "speed": 1.14, "direction_rad": -2.19}, {"id": 394, "centroid": [435.8, 362.8], "area": 237.5, "speed": 1.43, "direction_rad": -2.97}, {"id": 398, "centroid": [462.7, 379.8], "area": 223.5, "speed": 1.42, "direction_rad": 3.1}, {"id": 399, "centroid": [582.5, 430.2], "area": 202.0, "speed": 0.58, "direction_rad": -1.95}, {"id": 397, "centroid": [631.0, 341.5], "area": 150.5, "speed": 44.94, "direction_rad": -1.59}]}
+
+[JSON LOG] {"timestamp": 1789160716.5573072, "fish_count": 4, "activity_pct": 1.22, "fish": [{"id": 395, "centroid": [428.1, 430.0], "area": 1184.0, "speed": 1.68, "direction_rad": -2.65}, {"id": 407, "centroid": [340.9, 308.6], "area": 1091.0, "speed": 3.63, "direction_rad": -0.36}, {"id": 410, "centroid": [251.9, 313.3], "area": 364.5, "speed": 1.12, "direction_rad": 2.54}, {"id": 404, "centroid": [295.1, 333.8], "area": 257.0, "speed": 5.25, "direction_rad": 0.77}]}
+
+[JSON LOG] {"timestamp": 1789160721.587497, "fish_count": 4, "activity_pct": 1.27, "fish": [{"id": 423, "centroid": [354.1, 460.6], "area": 1282.0, "speed": 2.51, "direction_rad": -0.35}, {"id": 412, "centroid": [404.8, 317.3], "area": 826.5, "speed": 1.18, "direction_rad": 0.14}, {"id": 422, "centroid": [380.4, 373.0], "area": 238.0, "speed": 15.18, "direction_rad": -0.07}, {"id": 419, "centroid": [347.6, 379.8], "area": 206.5, "speed": 79.34, "direction_rad": 0.29}]}
+
+[JSON LOG] {"timestamp": 1789160726.6005647, "fish_count": 4, "activity_pct": 0.98, "fish": [{"id": 428, "centroid": [429.5, 334.4], "area": 1250.5, "speed": 1.3, "direction_rad": -2.28}, {"id": 429, "centroid": [362.5, 320.9], "area": 382.5, "speed": 6.39, "direction_rad": -3.13}, {"id": 427, "centroid": [326.2, 327.6], "area": 368.0, "speed": 6.02, "direction_rad": -3.05}, {"id": 426, "centroid": [419.0, 301.0], "area": 271.0, "speed": 4.51, "direction_rad": 3.07}]}
+
+[JSON LOG] {"timestamp": 1789160731.605087, "fish_count": 1, "activity_pct": 1.73, "fish": [{"id": 447, "centroid": [142.8, 349.6], "area": 4713.0, "speed": 1.31, "direction_rad": 2.14}]}
+
+[JSON LOG] {"timestamp": 1789160736.6193066, "fish_count": 4, "activity_pct": 0.38, "fish": [{"id": 444, "centroid": [188.8, 257.4], "area": 268.0, "speed": 11.64, "direction_rad": -1.55}, {"id": 451, "centroid": [558.5, 399.2], "area": 264.0, "speed": 4.06, "direction_rad": 0.84}, {"id": 447, "centroid": [634.1, 81.0], "area": 227.5, "speed": 3.98, "direction_rad": -0.81}, {"id": 452, "centroid": [195.0, 283.0], "area": 153.0, "speed": 31.49, "direction_rad": 0.44}]}
+
+[JSON LOG] {"timestamp": 1789160741.638713, "fish_count": 2, "activity_pct": 0.57, "fish": [{"id": 457, "centroid": [332.8, 322.8], "area": 769.5, "speed": 1.44, "direction_rad": 0.06}, {"id": 466, "centroid": [268.6, 345.8], "area": 302.0, "speed": 1.34, "direction_rad": 0.02}]}
+
+[JSON LOG] {"timestamp": 1789160746.6485405, "fish_count": 4, "activity_pct": 0.57, "fish": [{"id": 475, "centroid": [122.7, 152.2], "area": 361.5, "speed": 0.83, "direction_rad": 1.46}, {"id": 473, "centroid": [370.3, 414.3], "area": 310.5, "speed": 1.19, "direction_rad": 2.13}, {"id": 476, "centroid": [413.7, 427.7], "area": 241.0, "speed": 0.93, "direction_rad": 2.28}, {"id": 478, "centroid": [71.7, 120.4], "area": 213.0, "speed": 1.78, "direction_rad": -2.26}]}
+
+[JSON LOG] {"timestamp": 1789160751.6698272, "fish_count": 5, "activity_pct": 1.15, "fish": [{"id": 486, "centroid": [433.8, 383.9], "area": 688.0, "speed": 1.33, "direction_rad": 0.13}, {"id": 488, "centroid": [448.9, 462.0], "area": 666.0, "speed": 1.22, "direction_rad": -1.15}, {"id": 483, "centroid": [414.3, 457.5], "area": 439.0, "speed": 0.9, "direction_rad": -1.05}, {"id": 480, "centroid": [19.3, 330.8], "area": 402.5, "speed": 0.34, "direction_rad": 1.58}, {"id": 487, "centroid": [439.8, 404.5], "area": 187.5, "speed": 65.68, "direction_rad": 0.71}]}
+
+[JSON LOG] {"timestamp": 1789160756.677579, "fish_count": 9, "activity_pct": 3.72, "fish": [{"id": 486, "centroid": [565.4, 386.1], "area": 4483.0, "speed": 4.55, "direction_rad": 0.18}, {"id": 492, "centroid": [91.3, 178.0], "area": 2802.0, "speed": 1.26, "direction_rad": -2.36}, {"id": 496, "centroid": [556.2, 460.4], "area": 1355.5, "speed": 2.42, "direction_rad": -0.29}, {"id": 498, "centroid": [9.8, 172.1], "area": 458.5, "speed": 3.06, "direction_rad": -1.28}, {"id": 494, "centroid": [386.4, 294.0], "area": 449.0, "speed": 2.41, "direction_rad": -3.11}, {"id": 499, "centroid": [279.3, 339.2], "area": 320.5, "speed": 1.71, "direction_rad": 2.81}, {"id": 495, "centroid": [278.6, 417.7], "area": 295.5, "speed": 1.93, "direction_rad": -2.84}, {"id": 493, "centroid": [544.0, 349.9], "area": 206.0, "speed": 1.6, "direction_rad": -0.07}, {"id": 500, "centroid": [480.9, 460.2], "area": 195.5, "speed": 2.08, "direction_rad": -0.2}]}
+
+[JSON LOG] {"timestamp": 1789160761.6920712, "fish_count": 2, "activity_pct": 0.52, "fish": [{"id": 505, "centroid": [83.7, 154.4], "area": 737.5, "speed": 1.55, "direction_rad": -0.56}, {"id": 507, "centroid": [133.3, 189.4], "area": 431.0, "speed": 1.34, "direction_rad": -1.13}]}
+
+[JSON LOG] {"timestamp": 1789160766.699492, "fish_count": 3, "activity_pct": 0.54, "fish": [{"id": 507, "centroid": [179.0, 348.8], "area": 384.5, "speed": 1.0, "direction_rad": 0.03}, {"id": 524, "centroid": [338.3, 329.6], "area": 338.0, "speed": 1.11, "direction_rad": 0.25}, {"id": 514, "centroid": [132.9, 384.3], "area": 200.0, "speed": 1.33, "direction_rad": -0.18}]}
+
+[JSON LOG] {"timestamp": 1789160771.7247348, "fish_count": 3, "activity_pct": 1.43, "fish": [{"id": 527, "centroid": [103.5, 288.0], "area": 3098.5, "speed": 3.3, "direction_rad": 1.44}, {"id": 534, "centroid": [10.9, 290.8], "area": 917.5, "speed": 3.97, "direction_rad": 1.66}, {"id": 528, "centroid": [163.5, 252.6], "area": 181.0, "speed": 1.52, "direction_rad": 1.31}]}
+
+[JSON LOG] {"timestamp": 1789160776.7530444, "fish_count": 5, "activity_pct": 2.02, "fish": [{"id": 539, "centroid": [520.3, 415.7], "area": 3738.0, "speed": 3.77, "direction_rad": 2.79}, {"id": 534, "centroid": [50.5, 267.6], "area": 817.0, "speed": 3.19, "direction_rad": 1.17}, {"id": 546, "centroid": [383.7, 337.8], "area": 616.5, "speed": 1.43, "direction_rad": 3.08}, {"id": 547, "centroid": [579.0, 421.9], "area": 310.0, "speed": 0.46, "direction_rad": 2.32}, {"id": 544, "centroid": [99.1, 245.4], "area": 276.0, "speed": 3.1, "direction_rad": 1.73}]}
+
+[JSON LOG] {"timestamp": 1789160781.7671406, "fish_count": 2, "activity_pct": 0.7, "fish": [{"id": 544, "centroid": [160.9, 310.6], "area": 1505.0, "speed": 1.81, "direction_rad": 2.0}, {"id": 549, "centroid": [383.1, 393.2], "area": 294.0, "speed": 0.74, "direction_rad": -1.99}]}
+
+[JSON LOG] {"timestamp": 1789160786.7774565, "fish_count": 1, "activity_pct": 0.72, "fish": [{"id": 558, "centroid": [488.0, 316.6], "area": 1880.0, "speed": 2.28, "direction_rad": 1.96}]}
+
+[JSON LOG] {"timestamp": 1789160791.7958858, "fish_count": 2, "activity_pct": 2.02, "fish": [{"id": 539, "centroid": [588.1, 387.5], "area": 4733.0, "speed": 1.73, "direction_rad": 0.13}, {"id": 561, "centroid": [576.1, 468.1], "area": 944.5, "speed": 2.82, "direction_rad": -0.27}]}
+
+[JSON LOG] {"timestamp": 1789160796.8172102, "fish_count": 0, "activity_pct": 0.22, "fish": []}
+
+[JSON LOG] {"timestamp": 1789160801.8236232, "fish_count": 5, "activity_pct": 2.02, "fish": [{"id": 567, "centroid": [185.8, 331.5], "area": 2404.0, "speed": 5.17, "direction_rad": 0.44}, {"id": 572, "centroid": [23.7, 319.0], "area": 1119.5, "speed": 1.0, "direction_rad": -2.39}, {"id": 571, "centroid": [107.3, 324.5], "area": 1023.5, "speed": 1.71, "direction_rad": -0.32}, {"id": 574, "centroid": [398.7, 322.0], "area": 955.5, "speed": 1.69, "direction_rad": 3.1}, {"id": 577, "centroid": [411.9, 300.7], "area": 288.5, "speed": 1.52, "direction_rad": 2.98}]}
+
+[JSON LOG] {"timestamp": 1789160806.8573706, "fish_count": 4, "activity_pct": 1.08, "fish": [{"id": 539, "centroid": [29.6, 294.9], "area": 1912.0, "speed": 1.41, "direction_rad": -0.18}, {"id": 580, "centroid": [12.0, 402.3], "area": 404.5, "speed": 0.91, "direction_rad": 1.61}, {"id": 579, "centroid": [59.9, 403.0], "area": 387.0, "speed": 0.85, "direction_rad": 1.77}, {"id": 578, "centroid": [188.6, 302.8], "area": 221.5, "speed": 2.83, "direction_rad": -2.17}]}
+
+[JSON LOG] {"timestamp": 1789160811.8803902, "fish_count": 3, "activity_pct": 0.74, "fish": [{"id": 585, "centroid": [156.0, 265.7], "area": 819.5, "speed": 0.26, "direction_rad": 0.59}, {"id": 579, "centroid": [110.2, 252.2], "area": 615.5, "speed": 0.97, "direction_rad": -1.15}, {"id": 588, "centroid": [506.0, 331.8], "area": 294.0, "speed": 0.93, "direction_rad": -0.2}]}
+
+[JSON LOG] {"timestamp": 1789160816.8875952, "fish_count": 6, "activity_pct": 2.09, "fish": [{"id": 594, "centroid": [109.2, 103.1], "area": 3038.5, "speed": 1.21, "direction_rad": -0.93}, {"id": 579, "centroid": [42.6, 83.9], "area": 1715.5, "speed": 2.92, "direction_rad": -1.94}, {"id": 585, "centroid": [84.1, 200.5], "area": 314.5, "speed": 6.69, "direction_rad": -0.07}, {"id": 590, "centroid": [125.5, 193.6], "area": 232.0, "speed": 15.66, "direction_rad": 1.51}, {"id": 589, "centroid": [3.6, 211.0], "area": 163.0, "speed": 12.16, "direction_rad": 1.56}, {"id": 586, "centroid": [53.7, 226.5], "area": 151.5, "speed": 70.72, "direction_rad": 1.51}]}
+
+[JSON LOG] {"timestamp": 1789160821.8938415, "fish_count": 3, "activity_pct": 0.3, "fish": [{"id": 597, "centroid": [392.8, 347.6], "area": 349.5, "speed": 0.89, "direction_rad": -0.3}, {"id": 590, "centroid": [394.3, 458.5], "area": 249.5, "speed": 1.13, "direction_rad": -1.17}, {"id": 595, "centroid": [629.0, 356.6], "area": 185.0, "speed": 1.0, "direction_rad": -2.03}]}
+
+[JSON LOG] {"timestamp": 1789160826.8942733, "fish_count": 2, "activity_pct": 0.31, "fish": [{"id": 607, "centroid": [594.6, 341.6], "area": 624.0, "speed": 4.02, "direction_rad": 2.75}, {"id": 605, "centroid": [596.2, 270.4], "area": 213.0, "speed": 3.9, "direction_rad": 2.82}]}
+
+[JSON LOG] {"timestamp": 1789160831.896153, "fish_count": 3, "activity_pct": 0.49, "fish": [{"id": 610, "centroid": [464.9, 338.2], "area": 845.0, "speed": 1.65, "direction_rad": -3.1}, {"id": 612, "centroid": [471.3, 366.7], "area": 207.0, "speed": 0.76, "direction_rad": 0.83}, {"id": 611, "centroid": [304.6, 353.6], "area": 199.5, "speed": 1.16, "direction_rad": -3.11}]}
+
+[JSON LOG] {"timestamp": 1789160836.9077888, "fish_count": 4, "activity_pct": 1.38, "fish": [{"id": 617, "centroid": [492.8, 289.9], "area": 1162.5, "speed": 1.96, "direction_rad": -1.24}, {"id": 613, "centroid": [513.1, 331.3], "area": 1035.5, "speed": 1.45, "direction_rad": 0.0}, {"id": 615, "centroid": [517.0, 442.9], "area": 963.0, "speed": 1.5, "direction_rad": -0.17}, {"id": 618, "centroid": [627.2, 286.9], "area": 666.5, "speed": 2.81, "direction_rad": -2.15}]}
+
+[JSON LOG] {"timestamp": 1789160841.9294326, "fish_count": 3, "activity_pct": 0.42, "fish": [{"id": 619, "centroid": [285.4, 352.0], "area": 498.5, "speed": 17.39, "direction_rad": -3.0}, {"id": 621, "centroid": [338.0, 362.5], "area": 358.5, "speed": 0.0, "direction_rad": 0.0}, {"id": 620, "centroid": [338.1, 333.0], "area": 190.0, "speed": 1.98, "direction_rad": 2.95}]}
+
+[JSON LOG] {"timestamp": 1789160846.9541988, "fish_count": 1, "activity_pct": 0.2, "fish": [{"id": 627, "centroid": [385.1, 251.0], "area": 311.5, "speed": 0.58, "direction_rad": -1.23}]}
+
+[JSON LOG] {"timestamp": 1789160851.955567, "fish_count": 10, "activity_pct": 17.09, "fish": [{"id": 639, "centroid": [526.3, 89.0], "area": 17019.5, "speed": 44.66, "direction_rad": -1.47}, {"id": 634, "centroid": [370.1, 341.1], "area": 8893.5, "speed": 9.05, "direction_rad": 2.22}, {"id": 637, "centroid": [83.4, 402.0], "area": 8410.0, "speed": 38.42, "direction_rad": -1.49}, {"id": 647, "centroid": [33.5, 85.3], "area": 3596.5, "speed": 41.39, "direction_rad": -1.29}, {"id": 643, "centroid": [254.8, 396.8], "area": 2844.0, "speed": 35.0, "direction_rad": -2.27}, {"id": 641, "centroid": [271.0, 85.7], "area": 2160.0, "speed": 43.0, "direction_rad": 1.43}, {"id": 646, "centroid": [162.0, 84.5], "area": 1837.0, "speed": 42.0, "direction_rad": 1.49}, {"id": 640, "centroid": [154.1, 248.4], "area": 781.5, "speed": 41.9, "direction_rad": -1.42}, {"id": 651, "centroid": [402.5, 387.2], "area": 707.0, "speed": 1.76, "direction_rad": 0.28}, {"id": 650, "centroid": [330.1, 399.7], "area": 690.5, "speed": 11.6, "direction_rad": 2.27}]}
+
+[JSON LOG] {"timestamp": 1789160856.9867449, "fish_count": 3, "activity_pct": 0.68, "fish": [{"id": 659, "centroid": [272.8, 385.6], "area": 542.5, "speed": 2.79, "direction_rad": 2.31}, {"id": 661, "centroid": [564.7, 339.8], "area": 388.0, "speed": 1.31, "direction_rad": -2.69}, {"id": 651, "centroid": [311.0, 368.6], "area": 182.0, "speed": 1.36, "direction_rad": 0.1}]}
+
+[JSON LOG] {"timestamp": 1789160861.996277, "fish_count": 3, "activity_pct": 2.25, "fish": [{"id": 659, "centroid": [114.6, 241.9], "area": 4421.5, "speed": 3.87, "direction_rad": 0.02}, {"id": 667, "centroid": [180.6, 387.6], "area": 1313.0, "speed": 1.31, "direction_rad": 0.96}, {"id": 657, "centroid": [235.5, 342.8], "area": 297.0, "speed": 3.52, "direction_rad": -2.81}]}
+
+[JSON LOG] {"timestamp": 1789160867.0327559, "fish_count": 4, "activity_pct": 1.65, "fish": [{"id": 671, "centroid": [57.1, 334.4], "area": 3548.5, "speed": 17.43, "direction_rad": 0.17}, {"id": 667, "centroid": [260.1, 429.0], "area": 401.5, "speed": 1.32, "direction_rad": 1.48}, {"id": 676, "centroid": [357.5, 384.8], "area": 189.0, "speed": 1.61, "direction_rad": 2.65}, {"id": 677, "centroid": [321.6, 387.3], "area": 189.0, "speed": 7.57, "direction_rad": -2.88}]}
+
+[JSON LOG] {"timestamp": 1789160872.0406835, "fish_count": 1, "activity_pct": 0.23, "fish": [{"id": 671, "centroid": [67.0, 361.9], "area": 345.5, "speed": 6.89, "direction_rad": -0.14}]}
+
+[JSON LOG] {"timestamp": 1789160877.1029592, "fish_count": 2, "activity_pct": 0.31, "fish": [{"id": 681, "centroid": [205.7, 292.5], "area": 626.0, "speed": 0.78, "direction_rad": -0.53}, {"id": 671, "centroid": [116.7, 354.4], "area": 167.0, "speed": 3.86, "direction_rad": -1.59}]}
+
+[JSON LOG] {"timestamp": 1789160882.1146507, "fish_count": 3, "activity_pct": 0.94, "fish": [{"id": 688, "centroid": [273.8, 318.4], "area": 1158.5, "speed": 2.74, "direction_rad": 0.45}, {"id": 671, "centroid": [483.4, 373.8], "area": 209.0, "speed": 2.66, "direction_rad": -1.87}, {"id": 691, "centroid": [198.9, 316.1], "area": 159.5, "speed": 47.13, "direction_rad": 2.79}]}
+
+[JSON LOG] {"timestamp": 1789160887.130717, "fish_count": 5, "activity_pct": 2.13, "fish": [{"id": 699, "centroid": [573.7, 431.0], "area": 4330.0, "speed": 1.45, "direction_rad": -0.09}, {"id": 698, "centroid": [461.7, 356.4], "area": 685.5, "speed": 0.51, "direction_rad": -2.91}, {"id": 689, "centroid": [550.4, 377.7], "area": 398.0, "speed": 2.8, "direction_rad": 0.25}, {"id": 694, "centroid": [450.6, 380.4], "area": 263.5, "speed": 2.8, "direction_rad": 0.14}, {"id": 700, "centroid": [352.5, 370.8], "area": 257.0, "speed": 1.99, "direction_rad": -2.45}]}
+
+[JSON LOG] {"timestamp": 1789160892.1444016, "fish_count": 0, "activity_pct": 0.01, "fish": []}
+
+[JSON LOG] {"timestamp": 1789160897.1696079, "fish_count": 0, "activity_pct": 0.02, "fish": []}
+
+[JSON LOG] {"timestamp": 1789160902.1697567, "fish_count": 1, "activity_pct": 0.15, "fish": [{"id": 712, "centroid": [76.4, 365.7], "area": 169.5, "speed": 0.83, "direction_rad": -3.11}]}
+
+[JSON LOG] {"timestamp": 1789160907.1757512, "fish_count": 2, "activity_pct": 1.39, "fish": [{"id": 714, "centroid": [328.4, 402.2], "area": 3618.5, "speed": 3.19, "direction_rad": -0.06}, {"id": 717, "centroid": [268.5, 394.2], "area": 188.5, "speed": 2.01, "direction_rad": 0.01}]}
+
+[JSON LOG] {"timestamp": 1789160912.199729, "fish_count": 6, "activity_pct": 0.6, "fish": [{"id": 723, "centroid": [571.1, 397.4], "area": 340.0, "speed": 0.75, "direction_rad": 2.1}, {"id": 717, "centroid": [525.7, 435.8], "area": 313.0, "speed": 1.29, "direction_rad": -2.29}, {"id": 714, "centroid": [594.2, 337.7], "area": 292.0, "speed": 0.15, "direction_rad": -0.61}, {"id": 722, "centroid": [618.6, 418.5], "area": 252.5, "speed": 1.07, "direction_rad": 0.94}, {"id": 724, "centroid": [521.1, 379.5], "area": 204.5, "speed": 0.33, "direction_rad": 1.95}, {"id": 725, "centroid": [595.7, 413.1], "area": 188.0, "speed": 0.23, "direction_rad": 2.84}]}
+
+[JSON LOG] {"timestamp": 1789160917.22399, "fish_count": 5, "activity_pct": 0.86, "fish": [{"id": 729, "centroid": [622.0, 260.2], "area": 953.5, "speed": 4.19, "direction_rad": 1.34}, {"id": 726, "centroid": [572.9, 266.7], "area": 451.0, "speed": 5.88, "direction_rad": 2.42}, {"id": 727, "centroid": [561.6, 228.5], "area": 351.0, "speed": 3.39, "direction_rad": -1.76}, {"id": 733, "centroid": [360.1, 392.6], "area": 201.0, "speed": 52.31, "direction_rad": 1.73}, {"id": 731, "centroid": [373.8, 435.8], "area": 162.0, "speed": 1.02, "direction_rad": -2.96}]}
+
+[JSON LOG] {"timestamp": 1789160922.248737, "fish_count": 0, "activity_pct": 0.02, "fish": []}
+
+[JSON LOG] {"timestamp": 1789160927.2574298, "fish_count": 1, "activity_pct": 0.27, "fish": [{"id": 738, "centroid": [268.0, 340.9], "area": 197.5, "speed": 1.28, "direction_rad": 2.63}]}
+
+[JSON LOG] {"timestamp": 1789160932.2879872, "fish_count": 2, "activity_pct": 0.37, "fish": [{"id": 742, "centroid": [273.0, 320.1], "area": 597.5, "speed": 5.49, "direction_rad": 0.43}, {"id": 749, "centroid": [14.6, 395.0], "area": 172.0, "speed": 0.96, "direction_rad": 1.17}]}
+
+[JSON LOG] {"timestamp": 1789160937.3021362, "fish_count": 5, "activity_pct": 1.81, "fish": [{"id": 751, "centroid": [492.9, 404.1], "area": 2237.0, "speed": 11.38, "direction_rad": 2.23}, {"id": 752, "centroid": [492.6, 356.7], "area": 1743.5, "speed": 25.69, "direction_rad": 0.59}, {"id": 754, "centroid": [380.5, 463.5], "area": 253.5, "speed": 0.39, "direction_rad": 2.67}, {"id": 753, "centroid": [494.7, 474.0], "area": 238.0, "speed": 2.06, "direction_rad": 3.14}, {"id": 758, "centroid": [181.5, 367.4], "area": 192.5, "speed": 3.49, "direction_rad": -1.51}]}
+
+[JSON LOG] {"timestamp": 1789160942.314376, "fish_count": 3, "activity_pct": 1.13, "fish": [{"id": 754, "centroid": [238.4, 303.1], "area": 2158.0, "speed": 1.96, "direction_rad": -0.49}, {"id": 759, "centroid": [314.2, 340.3], "area": 341.5, "speed": 3.21, "direction_rad": 2.75}, {"id": 757, "centroid": [374.1, 340.6], "area": 215.0, "speed": 4.98, "direction_rad": 2.67}]}
+
+[JSON LOG] {"timestamp": 1789160947.352968, "fish_count": 1, "activity_pct": 0.25, "fish": [{"id": 766, "centroid": [530.0, 348.7], "area": 186.0, "speed": 0.58, "direction_rad": -2.94}]}
+
+[JSON LOG] {"timestamp": 1789160952.387994, "fish_count": 1, "activity_pct": 0.29, "fish": [{"id": 775, "centroid": [223.2, 442.2], "area": 483.0, "speed": 1.68, "direction_rad": 2.18}]}
+
+[JSON LOG] {"timestamp": 1789160957.4103644, "fish_count": 2, "activity_pct": 0.34, "fish": [{"id": 776, "centroid": [166.7, 356.9], "area": 414.5, "speed": 1.08, "direction_rad": -1.32}, {"id": 784, "centroid": [590.6, 327.1], "area": 195.5, "speed": 0.46, "direction_rad": -2.82}]}
+
+[JSON LOG] {"timestamp": 1789160962.4353244, "fish_count": 2, "activity_pct": 1.14, "fish": [{"id": 775, "centroid": [369.7, 394.0], "area": 2155.5, "speed": 1.58, "direction_rad": -0.47}, {"id": 790, "centroid": [305.2, 324.0], "area": 1043.5, "speed": 2.14, "direction_rad": 3.05}]}
+
+[JSON LOG] {"timestamp": 1789160967.4480097, "fish_count": 3, "activity_pct": 2.5, "fish": [{"id": 775, "centroid": [381.9, 313.3], "area": 6683.0, "speed": 6.89, "direction_rad": 0.13}, {"id": 791, "centroid": [401.5, 459.6], "area": 359.0, "speed": 1.98, "direction_rad": -2.15}, {"id": 793, "centroid": [394.3, 385.9], "area": 170.5, "speed": 1.35, "direction_rad": 3.01}]}
+
+[JSON LOG] {"timestamp": 1789160972.4708622, "fish_count": 0, "activity_pct": 0.12, "fish": []}
+
+[JSON LOG] {"timestamp": 1789160977.4756508, "fish_count": 1, "activity_pct": 0.18, "fish": [{"id": 802, "centroid": [547.7, 390.6], "area": 202.5, "speed": 87.64, "direction_rad": -0.06}]}
+
+[JSON LOG] {"timestamp": 1789160982.5078037, "fish_count": 4, "activity_pct": 1.34, "fish": [{"id": 808, "centroid": [329.2, 385.1], "area": 1690.5, "speed": 1.39, "direction_rad": -3.1}, {"id": 806, "centroid": [304.0, 453.5], "area": 803.5, "speed": 0.64, "direction_rad": 2.93}, {"id": 811, "centroid": [536.9, 387.7], "area": 483.0, "speed": 1.25, "direction_rad": -0.14}, {"id": 802, "centroid": [509.3, 369.1], "area": 277.0, "speed": 10.09, "direction_rad": 0.12}]}
+
+[JSON LOG] {"timestamp": 1789160987.5190692, "fish_count": 1, "activity_pct": 0.29, "fish": [{"id": 813, "centroid": [461.2, 436.2], "area": 349.0, "speed": 1.93, "direction_rad": -0.37}]}
+
+[JSON LOG] {"timestamp": 1789160992.5375705, "fish_count": 1, "activity_pct": 0.12, "fish": [{"id": 820, "centroid": [407.2, 352.5], "area": 180.5, "speed": 2.36, "direction_rad": -3.0}]}
+
+[JSON LOG] {"timestamp": 1789160997.5594618, "fish_count": 2, "activity_pct": 0.85, "fish": [{"id": 823, "centroid": [313.9, 436.3], "area": 2004.0, "speed": 1.52, "direction_rad": -1.13}, {"id": 822, "centroid": [245.2, 327.4], "area": 157.0, "speed": 2.61, "direction_rad": 3.05}]}
+
+[JSON LOG] {"timestamp": 1789161002.5888312, "fish_count": 2, "activity_pct": 0.31, "fish": [{"id": 829, "centroid": [507.6, 368.5], "area": 346.5, "speed": 1.99, "direction_rad": -2.77}, {"id": 830, "centroid": [502.9, 341.3], "area": 163.0, "speed": 0.0, "direction_rad": 0.0}]}
+
+[JSON LOG] {"timestamp": 1789161007.5981936, "fish_count": 0, "activity_pct": 0.03, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161012.6136177, "fish_count": 3, "activity_pct": 0.79, "fish": [{"id": 840, "centroid": [425.7, 351.6], "area": 1326.5, "speed": 2.0, "direction_rad": -0.39}, {"id": 828, "centroid": [358.3, 392.2], "area": 385.5, "speed": 1.02, "direction_rad": 1.66}, {"id": 839, "centroid": [380.6, 379.4], "area": 273.0, "speed": 5.4, "direction_rad": 2.89}]}
+
+[JSON LOG] {"timestamp": 1789161017.6492152, "fish_count": 1, "activity_pct": 0.3, "fish": [{"id": 845, "centroid": [412.1, 430.6], "area": 247.0, "speed": 1.07, "direction_rad": 2.53}]}
+
+[JSON LOG] {"timestamp": 1789161022.6528075, "fish_count": 2, "activity_pct": 1.43, "fish": [{"id": 845, "centroid": [173.5, 396.2], "area": 3474.0, "speed": 2.99, "direction_rad": 3.09}, {"id": 846, "centroid": [243.7, 374.4], "area": 688.5, "speed": 1.64, "direction_rad": 3.07}]}
+
+[JSON LOG] {"timestamp": 1789161027.6681163, "fish_count": 0, "activity_pct": 0.01, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161032.7025766, "fish_count": 1, "activity_pct": 0.18, "fish": [{"id": 858, "centroid": [451.0, 373.8], "area": 225.5, "speed": 2.06, "direction_rad": -0.08}]}
+
+[JSON LOG] {"timestamp": 1789161037.7068214, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161042.7106156, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161047.7510993, "fish_count": 0, "activity_pct": 0.12, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161052.7676828, "fish_count": 0, "activity_pct": 0.02, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161057.7930167, "fish_count": 0, "activity_pct": 0.02, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161062.8007019, "fish_count": 2, "activity_pct": 0.41, "fish": [{"id": 878, "centroid": [471.7, 377.0], "area": 647.5, "speed": 1.21, "direction_rad": -0.01}, {"id": 879, "centroid": [438.8, 389.4], "area": 285.0, "speed": 0.72, "direction_rad": -0.52}]}
+
+[JSON LOG] {"timestamp": 1789161067.812394, "fish_count": 0, "activity_pct": 0.03, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161072.816436, "fish_count": 0, "activity_pct": 0.05, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161077.8187473, "fish_count": 0, "activity_pct": 0.13, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161082.8572016, "fish_count": 1, "activity_pct": 0.14, "fish": [{"id": 898, "centroid": [506.2, 378.7], "area": 160.5, "speed": 0.0, "direction_rad": 0.0}]}
+
+[JSON LOG] {"timestamp": 1789161087.8590138, "fish_count": 0, "activity_pct": 0.08, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161092.8633187, "fish_count": 2, "activity_pct": 0.22, "fish": [{"id": 904, "centroid": [472.5, 371.0], "area": 215.0, "speed": 1.33, "direction_rad": 0.07}, {"id": 905, "centroid": [485.3, 349.6], "area": 175.0, "speed": 2.3, "direction_rad": -0.19}]}
+
+[JSON LOG] {"timestamp": 1789161097.877776, "fish_count": 3, "activity_pct": 2.03, "fish": [{"id": 910, "centroid": [590.5, 426.7], "area": 5138.0, "speed": 2.7, "direction_rad": -2.2}, {"id": 911, "centroid": [533.9, 384.3], "area": 479.0, "speed": 0.0, "direction_rad": 0.0}, {"id": 912, "centroid": [547.2, 470.4], "area": 201.0, "speed": 0.0, "direction_rad": 0.0}]}
+
+[JSON LOG] {"timestamp": 1789161102.9115198, "fish_count": 5, "activity_pct": 2.19, "fish": [{"id": 919, "centroid": [368.0, 361.0], "area": 2403.5, "speed": 7.46, "direction_rad": 0.57}, {"id": 913, "centroid": [377.8, 414.6], "area": 2017.0, "speed": 2.97, "direction_rad": -1.04}, {"id": 915, "centroid": [334.2, 293.8], "area": 492.5, "speed": 13.68, "direction_rad": 0.42}, {"id": 920, "centroid": [174.4, 405.3], "area": 285.5, "speed": 1.28, "direction_rad": 2.39}, {"id": 931, "centroid": [188.1, 372.3], "area": 224.5, "speed": 6.35, "direction_rad": 1.97}]}
+
+[JSON LOG] {"timestamp": 1789161107.9158077, "fish_count": 4, "activity_pct": 0.78, "fish": [{"id": 941, "centroid": [24.2, 379.7], "area": 661.0, "speed": 2.87, "direction_rad": 1.64}, {"id": 942, "centroid": [540.6, 459.5], "area": 409.0, "speed": 0.37, "direction_rad": 3.01}, {"id": 939, "centroid": [525.2, 398.4], "area": 368.5, "speed": 4.73, "direction_rad": -2.5}, {"id": 920, "centroid": [145.0, 469.4], "area": 289.0, "speed": 1.28, "direction_rad": -1.6}]}
+
+[JSON LOG] {"timestamp": 1789161112.928526, "fish_count": 6, "activity_pct": 1.43, "fish": [{"id": 948, "centroid": [314.4, 443.3], "area": 847.0, "speed": 1.13, "direction_rad": 2.69}, {"id": 951, "centroid": [231.3, 374.0], "area": 707.0, "speed": 0.77, "direction_rad": -1.98}, {"id": 949, "centroid": [216.1, 433.0], "area": 676.0, "speed": 6.51, "direction_rad": 2.99}, {"id": 946, "centroid": [128.2, 387.4], "area": 436.0, "speed": 0.54, "direction_rad": -2.28}, {"id": 945, "centroid": [40.8, 337.0], "area": 408.5, "speed": 2.28, "direction_rad": -0.23}, {"id": 939, "centroid": [433.5, 414.7], "area": 276.0, "speed": 4.0, "direction_rad": 0.82}]}
+
+[JSON LOG] {"timestamp": 1789161117.9616797, "fish_count": 2, "activity_pct": 0.4, "fish": [{"id": 948, "centroid": [83.9, 426.5], "area": 730.0, "speed": 1.11, "direction_rad": 2.55}, {"id": 945, "centroid": [123.7, 351.2], "area": 177.0, "speed": 0.8, "direction_rad": 2.25}]}
+
+[JSON LOG] {"timestamp": 1789161122.9914417, "fish_count": 5, "activity_pct": 1.5, "fish": [{"id": 958, "centroid": [242.0, 374.6], "area": 1751.5, "speed": 3.52, "direction_rad": 1.02}, {"id": 968, "centroid": [122.5, 437.3], "area": 965.5, "speed": 0.96, "direction_rad": 2.46}, {"id": 963, "centroid": [404.9, 373.1], "area": 681.0, "speed": 1.77, "direction_rad": -0.66}, {"id": 971, "centroid": [399.0, 407.3], "area": 374.5, "speed": 1.99, "direction_rad": -0.1}, {"id": 965, "centroid": [200.4, 411.2], "area": 370.5, "speed": 2.62, "direction_rad": 2.31}]}
+
+[JSON LOG] {"timestamp": 1789161128.0106556, "fish_count": 5, "activity_pct": 1.94, "fish": [{"id": 973, "centroid": [203.4, 454.2], "area": 2338.0, "speed": 1.86, "direction_rad": -2.96}, {"id": 976, "centroid": [73.2, 327.7], "area": 1667.0, "speed": 2.24, "direction_rad": 2.73}, {"id": 958, "centroid": [170.5, 297.7], "area": 839.5, "speed": 7.34, "direction_rad": -2.63}, {"id": 970, "centroid": [141.6, 330.3], "area": 219.5, "speed": 32.91, "direction_rad": 2.33}, {"id": 975, "centroid": [31.3, 308.7], "area": 178.5, "speed": 37.55, "direction_rad": 0.86}]}
+
+[JSON LOG] {"timestamp": 1789161133.0167615, "fish_count": 1, "activity_pct": 0.17, "fish": [{"id": 983, "centroid": [332.3, 322.1], "area": 224.0, "speed": 0.6, "direction_rad": 2.88}]}
+
+[JSON LOG] {"timestamp": 1789161138.0351846, "fish_count": 1, "activity_pct": 0.12, "fish": [{"id": 994, "centroid": [161.8, 454.9], "area": 195.0, "speed": 0.07, "direction_rad": -0.33}]}
+
+[JSON LOG] {"timestamp": 1789161143.0382395, "fish_count": 3, "activity_pct": 0.45, "fish": [{"id": 1002, "centroid": [347.3, 353.8], "area": 462.0, "speed": 0.88, "direction_rad": -3.03}, {"id": 998, "centroid": [194.0, 303.0], "area": 296.5, "speed": 0.69, "direction_rad": 3.09}, {"id": 1006, "centroid": [26.7, 301.7], "area": 198.5, "speed": 0.89, "direction_rad": -1.2}]}
+
+[JSON LOG] {"timestamp": 1789161148.0420012, "fish_count": 1, "activity_pct": 0.19, "fish": [{"id": 1009, "centroid": [138.6, 320.1], "area": 198.0, "speed": 1.02, "direction_rad": -2.82}]}
+
+[JSON LOG] {"timestamp": 1789161153.0552628, "fish_count": 1, "activity_pct": 0.17, "fish": [{"id": 1009, "centroid": [102.4, 343.2], "area": 216.5, "speed": 0.43, "direction_rad": 2.17}]}
+
+[JSON LOG] {"timestamp": 1789161158.0823886, "fish_count": 1, "activity_pct": 0.21, "fish": [{"id": 1013, "centroid": [326.4, 391.5], "area": 582.5, "speed": 1.38, "direction_rad": -0.93}]}
+
+[JSON LOG] {"timestamp": 1789161163.0971138, "fish_count": 1, "activity_pct": 0.13, "fish": [{"id": 1020, "centroid": [26.6, 385.1], "area": 248.0, "speed": 7.77, "direction_rad": 1.6}]}
+
+[JSON LOG] {"timestamp": 1789161168.1040032, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161173.1084151, "fish_count": 2, "activity_pct": 1.19, "fish": [{"id": 1032, "centroid": [197.6, 336.7], "area": 3066.5, "speed": 0.62, "direction_rad": 0.25}, {"id": 1027, "centroid": [163.8, 474.6], "area": 300.5, "speed": 2.85, "direction_rad": -0.11}]}
+
+[JSON LOG] {"timestamp": 1789161178.1403525, "fish_count": 3, "activity_pct": 0.58, "fish": [{"id": 1040, "centroid": [621.0, 227.0], "area": 347.5, "speed": 42.95, "direction_rad": -0.08}, {"id": 1038, "centroid": [627.9, 198.6], "area": 308.0, "speed": 10.6, "direction_rad": -1.0}, {"id": 1037, "centroid": [11.6, 319.1], "area": 174.0, "speed": 0.83, "direction_rad": 0.19}]}
+
+[JSON LOG] {"timestamp": 1789161183.1614747, "fish_count": 2, "activity_pct": 0.54, "fish": [{"id": 1046, "centroid": [247.8, 380.0], "area": 655.5, "speed": 0.83, "direction_rad": 2.37}, {"id": 1044, "centroid": [247.0, 422.5], "area": 600.0, "speed": 0.79, "direction_rad": -2.81}]}
+
+[JSON LOG] {"timestamp": 1789161188.1992674, "fish_count": 1, "activity_pct": 0.1, "fish": [{"id": 1046, "centroid": [125.5, 420.7], "area": 187.5, "speed": 1.9, "direction_rad": 0.17}]}
+
+[JSON LOG] {"timestamp": 1789161193.2069535, "fish_count": 2, "activity_pct": 0.36, "fish": [{"id": 1071, "centroid": [386.4, 187.3], "area": 292.0, "speed": 0.24, "direction_rad": 3.1}, {"id": 1072, "centroid": [42.5, 473.6], "area": 171.0, "speed": 6.4, "direction_rad": -0.13}]}
+
+[JSON LOG] {"timestamp": 1789161198.213032, "fish_count": 2, "activity_pct": 0.52, "fish": [{"id": 1073, "centroid": [342.5, 456.0], "area": 939.5, "speed": 2.5, "direction_rad": -2.98}, {"id": 1074, "centroid": [338.7, 398.9], "area": 331.0, "speed": 0.0, "direction_rad": 0.0}]}
+
+[JSON LOG] {"timestamp": 1789161203.2313616, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161208.266095, "fish_count": 0, "activity_pct": 0.06, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161213.2837744, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161218.2953563, "fish_count": 0, "activity_pct": 0.06, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161223.3102198, "fish_count": 0, "activity_pct": 0.01, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161228.3183625, "fish_count": 0, "activity_pct": 0.05, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161233.3514836, "fish_count": 1, "activity_pct": 0.37, "fish": [{"id": 1110, "centroid": [628.4, 322.1], "area": 866.0, "speed": 2.29, "direction_rad": -2.6}]}
+
+[JSON LOG] {"timestamp": 1789161238.360713, "fish_count": 1, "activity_pct": 0.51, "fish": [{"id": 1115, "centroid": [589.2, 372.0], "area": 996.0, "speed": 0.78, "direction_rad": -1.67}]}
+
+[JSON LOG] {"timestamp": 1789161243.3913126, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161248.4082937, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161253.448255, "fish_count": 2, "activity_pct": 0.35, "fish": [{"id": 1129, "centroid": [629.5, 319.6], "area": 468.5, "speed": 1.42, "direction_rad": -1.14}, {"id": 1143, "centroid": [565.6, 367.6], "area": 314.0, "speed": 0.87, "direction_rad": -0.92}]}
+
+[JSON LOG] {"timestamp": 1789161258.4899416, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161263.5194404, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161268.5251288, "fish_count": 1, "activity_pct": 0.67, "fish": [{"id": 1162, "centroid": [160.2, 19.6], "area": 1963.0, "speed": 14.89, "direction_rad": 1.51}]}
+
+[JSON LOG] {"timestamp": 1789161273.5453954, "fish_count": 1, "activity_pct": 0.06, "fish": [{"id": 1168, "centroid": [356.9, 423.9], "area": 166.5, "speed": 0.69, "direction_rad": -1.21}]}
+
+[JSON LOG] {"timestamp": 1789161278.5778835, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161283.5853302, "fish_count": 0, "activity_pct": 0.15, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161288.6268058, "fish_count": 1, "activity_pct": 0.08, "fish": [{"id": 1180, "centroid": [285.3, 326.1], "area": 203.5, "speed": 0.65, "direction_rad": 0.16}]}
+
+[JSON LOG] {"timestamp": 1789161293.6295576, "fish_count": 0, "activity_pct": 0.02, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161298.6706598, "fish_count": 2, "activity_pct": 0.4, "fish": [{"id": 1204, "centroid": [344.5, 429.4], "area": 497.0, "speed": 6.52, "direction_rad": 3.14}, {"id": 1205, "centroid": [342.0, 339.4], "area": 216.5, "speed": 0.69, "direction_rad": -3.03}]}
+
+[JSON LOG] {"timestamp": 1789161303.6984303, "fish_count": 0, "activity_pct": 0.01, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161308.7136552, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161313.7231462, "fish_count": 2, "activity_pct": 0.36, "fish": [{"id": 1211, "centroid": [198.1, 364.1], "area": 449.0, "speed": 11.88, "direction_rad": -2.56}, {"id": 1208, "centroid": [232.4, 388.1], "area": 170.0, "speed": 42.44, "direction_rad": -1.34}]}
+
+[JSON LOG] {"timestamp": 1789161318.7257679, "fish_count": 7, "activity_pct": 2.65, "fish": [{"id": 1208, "centroid": [305.3, 349.1], "area": 3725.5, "speed": 1.19, "direction_rad": 0.46}, {"id": 1232, "centroid": [441.0, 209.9], "area": 1182.0, "speed": 2.38, "direction_rad": -0.48}, {"id": 1221, "centroid": [534.6, 367.2], "area": 581.5, "speed": 2.54, "direction_rad": -0.45}, {"id": 1234, "centroid": [510.7, 387.8], "area": 514.5, "speed": 3.34, "direction_rad": 0.82}, {"id": 1209, "centroid": [293.8, 469.7], "area": 334.5, "speed": 0.95, "direction_rad": 0.07}, {"id": 1235, "centroid": [554.1, 236.8], "area": 293.5, "speed": 3.06, "direction_rad": 1.73}, {"id": 1236, "centroid": [579.2, 235.0], "area": 280.0, "speed": 4.24, "direction_rad": -1.12}]}
+
+[JSON LOG] {"timestamp": 1789161323.761721, "fish_count": 1, "activity_pct": 0.1, "fish": [{"id": 1208, "centroid": [382.1, 328.7], "area": 153.5, "speed": 24.53, "direction_rad": -1.0}]}
+
+[JSON LOG] {"timestamp": 1789161328.7724376, "fish_count": 1, "activity_pct": 0.68, "fish": [{"id": 1243, "centroid": [244.5, 398.3], "area": 1760.5, "speed": 1.48, "direction_rad": 2.54}]}
+
+[JSON LOG] {"timestamp": 1789161333.7750204, "fish_count": 2, "activity_pct": 0.2, "fish": [{"id": 1247, "centroid": [85.6, 410.9], "area": 206.5, "speed": 2.79, "direction_rad": 2.39}, {"id": 1250, "centroid": [155.6, 358.6], "area": 162.5, "speed": 29.97, "direction_rad": 2.79}]}
+
+[JSON LOG] {"timestamp": 1789161338.7859938, "fish_count": 2, "activity_pct": 0.52, "fish": [{"id": 1247, "centroid": [271.3, 415.2], "area": 1047.5, "speed": 2.42, "direction_rad": -0.41}, {"id": 1256, "centroid": [275.1, 475.2], "area": 332.0, "speed": 0.86, "direction_rad": -0.16}]}
+
+[JSON LOG] {"timestamp": 1789161343.8233876, "fish_count": 6, "activity_pct": 3.56, "fish": [{"id": 1261, "centroid": [590.9, 385.3], "area": 7003.0, "speed": 1.61, "direction_rad": -2.33}, {"id": 1262, "centroid": [450.4, 320.2], "area": 945.0, "speed": 1.6, "direction_rad": -2.8}, {"id": 1264, "centroid": [632.5, 122.8], "area": 512.0, "speed": 10.48, "direction_rad": 0.16}, {"id": 1263, "centroid": [449.6, 401.0], "area": 422.0, "speed": 1.36, "direction_rad": 2.58}, {"id": 1258, "centroid": [284.2, 362.1], "area": 256.5, "speed": 2.01, "direction_rad": -0.79}, {"id": 1259, "centroid": [206.0, 380.4], "area": 150.5, "speed": 66.92, "direction_rad": -1.84}]}
+
+[JSON LOG] {"timestamp": 1789161348.8401883, "fish_count": 2, "activity_pct": 1.95, "fish": [{"id": 1270, "centroid": [510.9, 410.0], "area": 5131.0, "speed": 2.56, "direction_rad": -0.68}, {"id": 1271, "centroid": [548.1, 471.7], "area": 826.0, "speed": 2.48, "direction_rad": -0.01}]}
+
+[JSON LOG] {"timestamp": 1789161353.8435593, "fish_count": 0, "activity_pct": 0.11, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161358.8529603, "fish_count": 4, "activity_pct": 0.94, "fish": [{"id": 1283, "centroid": [331.0, 399.9], "area": 1445.5, "speed": 10.93, "direction_rad": -0.68}, {"id": 1278, "centroid": [505.7, 434.4], "area": 394.0, "speed": 0.77, "direction_rad": 0.17}, {"id": 1280, "centroid": [166.7, 317.1], "area": 299.0, "speed": 0.73, "direction_rad": 0.41}, {"id": 1281, "centroid": [559.5, 428.2], "area": 158.0, "speed": 0.39, "direction_rad": 2.31}]}
+
+[JSON LOG] {"timestamp": 1789161363.8663988, "fish_count": 3, "activity_pct": 0.38, "fish": [{"id": 1290, "centroid": [450.0, 355.4], "area": 411.5, "speed": 1.58, "direction_rad": -1.9}, {"id": 1280, "centroid": [266.2, 348.8], "area": 220.0, "speed": 2.27, "direction_rad": -0.17}, {"id": 1289, "centroid": [7.6, 348.8], "area": 172.0, "speed": 0.26, "direction_rad": 1.87}]}
+
+[JSON LOG] {"timestamp": 1789161368.9085565, "fish_count": 2, "activity_pct": 0.39, "fish": [{"id": 1299, "centroid": [287.2, 324.8], "area": 328.5, "speed": 5.27, "direction_rad": 0.1}, {"id": 1298, "centroid": [274.8, 236.9], "area": 290.0, "speed": 1.09, "direction_rad": -2.2}]}
+
+[JSON LOG] {"timestamp": 1789161373.9519973, "fish_count": 1, "activity_pct": 0.35, "fish": [{"id": 1306, "centroid": [259.0, 330.2], "area": 850.0, "speed": 1.1, "direction_rad": 2.56}]}
+
+[JSON LOG] {"timestamp": 1789161378.9556396, "fish_count": 7, "activity_pct": 2.04, "fish": [{"id": 1306, "centroid": [363.2, 374.5], "area": 1481.0, "speed": 2.73, "direction_rad": -0.2}, {"id": 1311, "centroid": [506.9, 388.9], "area": 835.0, "speed": 1.97, "direction_rad": -1.25}, {"id": 1318, "centroid": [591.3, 380.1], "area": 689.0, "speed": 21.4, "direction_rad": -0.09}, {"id": 1314, "centroid": [520.0, 473.4], "area": 640.0, "speed": 7.42, "direction_rad": -3.12}, {"id": 1315, "centroid": [517.9, 438.7], "area": 513.0, "speed": 3.69, "direction_rad": -0.58}, {"id": 1312, "centroid": [587.3, 423.0], "area": 274.5, "speed": 5.93, "direction_rad": 2.83}, {"id": 1310, "centroid": [440.6, 417.1], "area": 221.0, "speed": 12.37, "direction_rad": -1.76}]}
+
+[JSON LOG] {"timestamp": 1789161383.9987216, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161389.0364752, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161394.053469, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161399.0805862, "fish_count": 1, "activity_pct": 0.1, "fish": [{"id": 1325, "centroid": [393.5, 349.0], "area": 239.0, "speed": 0.0, "direction_rad": 0.0}]}
+
+[JSON LOG] {"timestamp": 1789161404.115893, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161409.122297, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161414.165781, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161419.1735625, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161424.215799, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161429.2243695, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161434.2260237, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161439.2723906, "fish_count": 1, "activity_pct": 0.32, "fish": [{"id": 1333, "centroid": [426.1, 287.6], "area": 642.5, "speed": 2.31, "direction_rad": -3.13}]}
+
+[JSON LOG] {"timestamp": 1789161444.3125064, "fish_count": 5, "activity_pct": 1.67, "fish": [{"id": 1341, "centroid": [359.4, 448.6], "area": 2125.5, "speed": 1.8, "direction_rad": 0.35}, {"id": 1335, "centroid": [362.3, 386.4], "area": 1012.5, "speed": 3.21, "direction_rad": -0.1}, {"id": 1343, "centroid": [417.2, 254.8], "area": 877.0, "speed": 1.67, "direction_rad": 0.46}, {"id": 1332, "centroid": [336.1, 227.6], "area": 269.0, "speed": 5.15, "direction_rad": 1.36}, {"id": 1336, "centroid": [384.1, 366.3], "area": 242.0, "speed": 1.74, "direction_rad": -1.0}]}
+
+[JSON LOG] {"timestamp": 1789161449.3479388, "fish_count": 5, "activity_pct": 1.57, "fish": [{"id": 1343, "centroid": [543.3, 362.3], "area": 1597.0, "speed": 2.69, "direction_rad": 1.5}, {"id": 1352, "centroid": [363.6, 365.2], "area": 1085.0, "speed": 14.51, "direction_rad": -0.02}, {"id": 1336, "centroid": [363.0, 470.2], "area": 755.0, "speed": 13.23, "direction_rad": -0.08}, {"id": 1355, "centroid": [449.6, 218.8], "area": 531.5, "speed": 0.0, "direction_rad": 0.0}, {"id": 1353, "centroid": [399.3, 349.7], "area": 219.5, "speed": 13.77, "direction_rad": -0.17}]}
+
+[JSON LOG] {"timestamp": 1789161454.3598807, "fish_count": 2, "activity_pct": 0.36, "fish": [{"id": 1358, "centroid": [609.0, 419.2], "area": 465.0, "speed": 0.65, "direction_rad": -0.45}, {"id": 1357, "centroid": [443.7, 290.9], "area": 211.0, "speed": 5.14, "direction_rad": 1.78}]}
+
+[JSON LOG] {"timestamp": 1789161459.3855484, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161464.3901567, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161469.3941343, "fish_count": 2, "activity_pct": 0.2, "fish": [{"id": 1366, "centroid": [514.7, 374.5], "area": 264.0, "speed": 8.2, "direction_rad": -3.11}, {"id": 1368, "centroid": [442.7, 280.3], "area": 168.5, "speed": 2.8, "direction_rad": -0.63}]}
+
+[JSON LOG] {"timestamp": 1789161474.3991914, "fish_count": 2, "activity_pct": 0.79, "fish": [{"id": 1371, "centroid": [556.5, 375.0], "area": 1135.0, "speed": 2.23, "direction_rad": -0.38}, {"id": 1366, "centroid": [269.0, 377.9], "area": 739.5, "speed": 1.46, "direction_rad": -2.81}]}
+
+[JSON LOG] {"timestamp": 1789161479.4391212, "fish_count": 0, "activity_pct": 0.0, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161484.4448965, "fish_count": 1, "activity_pct": 0.46, "fish": [{"id": 1385, "centroid": [614.9, 398.1], "area": 1182.0, "speed": 0.34, "direction_rad": -0.08}]}
+
+[JSON LOG] {"timestamp": 1789161489.4776158, "fish_count": 1, "activity_pct": 1.13, "fish": [{"id": 1397, "centroid": [453.4, 302.1], "area": 3071.5, "speed": 0.42, "direction_rad": -0.59}]}
+
+[JSON LOG] {"timestamp": 1789161494.5184028, "fish_count": 0, "activity_pct": 0.01, "fish": []}
+
+[JSON LOG] {"timestamp": 1789161499.5495086, "fish_count": 2, "activity_pct": 0.41, "fish": [{"id": 1402, "centroid": [346.8, 420.5], "area": 479.0, "speed": 5.16, "direction_rad": 1.68}, {"id": 1403, "centroid": [486.3, 415.2], "area": 290.0, "speed": 0.57, "direction_rad": 1.88}]}

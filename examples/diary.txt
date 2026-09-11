@@ -1,0 +1,19 @@
+FISHRAND - THE FISH-GUARDED DIARY
+
+(date: some very serious day)
+
+The humans think their secrets are safe. And they are right -
+because they are guarded by a goldfish named Fibonacci.
+
+Today Fibonacci swam 147.3 cm according to the builder of this
+apparatus. He zigzagged 9 times and looked at me with an unblinking
+stare that I choose to interpret as cryptographic intent.
+
+I hid spare fish flakes in the crook of the power strip. Operational
+security demands refreshments.
+
+Note to future self: the fish contributes nothing to the actual
+security. The OS does. Do not tell the fish; it has a fragile ego but
+a very real swim bladder.
+
+-- me, trusting a fish with my secrets

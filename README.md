@@ -101,7 +101,7 @@ Deep dive: see [`documentary/how-it-was-built.md`](documentary/how-it-was-built.
 *A short walkthrough of the whole demo: camera finds the fish, the dashboard streams the pipeline while encrypting a diary entry, and the `.pkg` unlocks back on a different machine using the USB key.*
 
 # Additional Demos
-[Add any extra demo materials/links]
+Inspired by Cloudflare lava lamp - https://www.cloudflare.com/learning/ssl/lava-lamp-encryption/
 
 ## Team Contributions
 - **Abijit Arun (`abijit2626`):** `fishrand/` crypto core (schema, canonicalization, entropy conditioning, HKDF, AES-256-GCM, RSA-OAEP hybrid, package format), the v4 CLI, the vision tracker, and the honest security model.

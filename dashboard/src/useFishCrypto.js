@@ -48,5 +48,5 @@ export default function useFishCrypto() {
 }
 
 function demoPlaintext() {
-  return `FISHRAND pipeline demo · ${new Date().toISOString()}\n\nThis message is bound to the current fish vision window.`
+  return `MEENCRYPT pipeline demo · ${new Date().toISOString()}\n\nThis message is bound to the current fish vision window.`
 }

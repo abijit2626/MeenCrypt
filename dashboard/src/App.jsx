@@ -9,7 +9,7 @@ export default function App() {
     <div className="layout">
       <header className="topbar">
         <div>
-          <h1>FISHRAND</h1>
+          <h1>MEENCRYPT</h1>
           <p className="sub">physical entropy infrastructure · fish telemetry + crypto pipeline</p>
         </div>
         <nav className="nav">

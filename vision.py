@@ -18,7 +18,7 @@ import numpy as np
 # droidcam/v4l2loopback device without editing this file each time.
 CAMERA_INDEX = int(os.environ.get("FISHRAND_CAMERA_INDEX", "0"))
 MIN_CONTOUR_AREA = 150
-MAX_FISH = 10
+MAX_FISH = 5  # matches the real tank population; caps the tracker so noise/reflections can't be counted as extra fish
 TRAIL_LENGTH = 20
 ACTIVITY_HISTORY_LEN = 100
 MAX_MATCH_DIST = 150  # Increased to prevent ID thrashing during fast motion
@@ -26,7 +26,7 @@ TRACK_TTL = 25        # Increased to retain ID through brief detection gaps
 MAX_FISH_FOR_DISTANCE_LINES = 4
 
 # JSON Logging options
-JSON_LOG_INTERVAL = 5.0  # seconds
+JSON_LOG_INTERVAL = 2.0  # seconds
 PRINT_JSON_TO_TERMINAL = True
 SAVE_JSON_TO_FILE = True
 JSON_FILENAME = "fish_log.json"

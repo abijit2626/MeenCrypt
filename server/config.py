@@ -32,11 +32,12 @@ fish-vision repo merges:
     FISHRAND_AUDIO_BAUD     ESP32 serial baud rate (default 115200 - do not
                             change unless the firmware itself changes).
     FISHRAND_AUDIO_WINDOW_S how many wall-clock seconds of Sound_Level
-                            readings to collect per encryption (default 5.0,
+                            readings to collect per encryption (default 2.0,
                             matching vision.py's JSON_LOG_INTERVAL - one
                             fish frame interval; live audio can't be
                             bundled like historical fish frames the way
-                            FISHRAND_VISION_FRAMES bundles a 300s window).
+                            FISHRAND_VISION_FRAMES bundles a multi-frame
+                            window).
     FISHRAND_AUDIO_MIN_READINGS minimum valid Sound_Level lines required in
                             that window before the capture is trusted
                             (default 3 - guards against a wrong baud rate
@@ -46,7 +47,10 @@ fish-vision repo merges:
                             re-checks the configured fish sources and
                             republishes to the dashboard's live feed panel
                             + SSE stream when the window actually changed
-                            (default 2.0). This is what makes the
+                            (default 1.0 - deliberately faster than
+                            vision.py's own 2s JSON_LOG_INTERVAL so a fresh
+                            frame is never more than ~1s stale by the time
+                            this poller notices it). This is what makes the
                             dashboard's "Live fish vision feed" panel
                             update on its own instead of staying on
                             "Waiting for a vision window" forever - see
@@ -99,12 +103,12 @@ CORS_ORIGINS = [
 # ESP32 + INMP441 audio (server/audio_serial.py).
 AUDIO_SERIAL_PORT = os.getenv("FISHRAND_AUDIO_PORT", "").strip() or None
 AUDIO_BAUD_RATE = int(os.getenv("FISHRAND_AUDIO_BAUD", "115200"))
-AUDIO_WINDOW_DURATION_S = float(os.getenv("FISHRAND_AUDIO_WINDOW_S", "5.0"))
+AUDIO_WINDOW_DURATION_S = float(os.getenv("FISHRAND_AUDIO_WINDOW_S", "2.0"))
 AUDIO_MIN_READINGS = max(1, int(os.getenv("FISHRAND_AUDIO_MIN_READINGS", "3")))
 
 # Background dashboard-feed poller (server/main.py) - purely cosmetic/live
 # display, never gates encryption itself.
-VISION_POLL_INTERVAL_S = max(0.5, float(os.getenv("FISHRAND_VISION_POLL_S", "2.0")))
+VISION_POLL_INTERVAL_S = max(0.5, float(os.getenv("FISHRAND_VISION_POLL_S", "1.0")))
 
 # Fish-quality classification (fishrand/quality.py). See module docstring
 # above for why these defaults are starting points, not calibrated values.

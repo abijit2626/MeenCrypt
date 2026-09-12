@@ -188,7 +188,7 @@ export default function App() {
     <div className="layout">
       <header className="topbar">
         <div>
-          <h1>FISHRAND · DIARY</h1>
+          <h1>MeenCrypt · Diary</h1>
           <p className="sub">a diary kept encrypted on this PC — only your RSA private key opens it</p>
         </div>
         <nav className="nav">
@@ -207,7 +207,7 @@ export default function App() {
             {unlocked && <span className="tag ok">🔓 unlocked</span>}
           </div>
           <textarea
-            className="mono diary-big"
+            className="diary-big"
             rows={20}
             spellCheck={false}
             placeholder={

@@ -53,7 +53,7 @@ export default function Pipeline({ events, mode, onRun, busy }) {
         <svg className="flow-connector" height={40} viewBox="0 0 100 40" preserveAspectRatio="none">
           {done.slice(0, -1).map((_, i) => (
             <line key={i} x1={i * 100 / done.length + 20} y1="20" x2={(i + 1) * 100 / done.length + 20} y2="20"
-              strokeOpacity={0.25} strokeWidth="2" style={{ filter: 'drop-shadow(0 0 6px rgba(0,255,136,.7))' }} />
+              strokeOpacity={0.25} strokeWidth="2" style={{ filter: 'drop-shadow(0 0 6px rgba(238,246,251,.7))' }} />
           ))}
         </svg>
       )}

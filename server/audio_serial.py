@@ -34,7 +34,7 @@ SOUND_LEVEL_MIN = 0
 SOUND_LEVEL_MAX = 1_000_000
 
 DEFAULT_READ_TIMEOUT_S = 1.0
-DEFAULT_WINDOW_DURATION_S = 5.0   # matches vision.py's JSON_LOG_INTERVAL (one fish frame)
+DEFAULT_WINDOW_DURATION_S = 2.0   # matches vision.py's JSON_LOG_INTERVAL (one fish frame)
 DEFAULT_MIN_READINGS = 3          # floor to reject a suspiciously sparse window
 
 

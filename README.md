@@ -85,14 +85,14 @@ Deep dive: see [`documentary/how-it-was-built.md`](documentary/how-it-was-built.
 ![Screenshot1](Add screenshot 1 here with proper name)
 *The dashboard (`localhost:5173`) — live fish telemetry and the crypto pipeline streaming as structured events.*
 
-![Screenshot2](Add screenshot 2 here with proper name)
+![Screenshot2](screenshots/diary.jpeg)
 *The diary app (`localhost:5174`) — write → encrypt → download your `.pkg`, unlock it back with the private key.*
 
 ![Screenshot3](Add screenshot 3 here with proper name)
 *The OpenCV vision tracker — live fish detection, bounding boxes, trails and the activity sparkline.*
 
 # Diagrams
-![Workflow](Add your workflow/architecture diagram here)
+![Workflow](screenshots/workflow.jpeg)
 *Fish vision + ESP32 audio → quality classifier → SHA-256 conditioning → HKDF(AES session key) → AES-256-GCM + RSA-OAEP wrap → v4 package, decryptable only with the RSA private key.*
 
 ### Project Demo

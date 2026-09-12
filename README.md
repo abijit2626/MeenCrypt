@@ -12,7 +12,7 @@
 
 ### Project Description
 Your secrets are safe with 🐟 — MeenCrypt encrypts a diary using measurements
-of a goldfish swimming around its tank (with an optional ESP32 microphone
+of a fishs swimming around its tank (with an optional ESP32 microphone
 listening in). The secret is real (AES-256-GCM wrapped by an RSA-3072 public
 key); the fish only *conditions* the key with the moment it watched — it is
 honestly not an entropy source, and the code, README and UI all say so.
@@ -24,7 +24,7 @@ password manager just encrypts your secrets — no security product actually
 it.
 
 ### The Solution (that nobody asked for)
-MeenCrypt. A goldfish swims, OpenCV tracks it, an ESP32 mic overhears the tank,
+MeenCrypt. A fish swims, OpenCV tracks it, an ESP32 mic overhears the tank,
 and we fold *this tank, this exact moment* into an AES-256-GCM session key. The
 key is wrapped with your RSA-3072 keypair and the private half lives on a USB
 drive only you hold. The honest twist: the fish adds exactly zero entropy — the
@@ -41,7 +41,7 @@ For Software:
 - **Tools:** git · `run.sh` one-command orchestration · pytest (206 test functions)
 
 For Hardware:
-- **Components:** goldfish + tank, webcam or phone (droidcam), ESP32 + INMP441 I2S microphone
+- **Components:** fishs + tank, webcam or phone (droidcam), ESP32 + INMP441 I2S microphone
 - **Specifications:** ESP32 UART 115200 baud · INMP441 I2S (WS=GPIO14, SCK=GPIO15, SD=GPIO32, 16 kHz)
 - **Tools:** a USB drive (the private key lives there), plus any webcam the vision tracker can see a fish with
 

@@ -81,7 +81,7 @@ For Software:
 
 Deep dive: see [`documentary/how-it-was-built.md`](documentary/how-it-was-built.md) — the full engineering story behind the fish, the honest security model, and how it got here.
 
-# Screenshots (Add at least 3)
+# Screenshots
 ![Screenshot1](screenshots/dashboard.jpeg)
 *The dashboard (`localhost:5173`) — live fish telemetry and the crypto pipeline streaming as structured events.*
 

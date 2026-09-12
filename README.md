@@ -88,7 +88,7 @@ Deep dive: see [`documentary/how-it-was-built.md`](documentary/how-it-was-built.
 ![Screenshot2](screenshots/diary.jpeg)
 *The diary app (`localhost:5174`) — write → encrypt → download your `.pkg`, unlock it back with the private key.*
 
-![Screenshot3](Add screenshot 3 here with proper name)
+![Screenshot3](screenshots/vision.jpeg)
 *The OpenCV vision tracker — live fish detection, bounding boxes, trails and the activity sparkline.*
 
 # Diagrams

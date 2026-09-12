@@ -1,4 +1,5 @@
 import FishSource from '../components/FishSource'
+import AudioSource from '../components/AudioSource'
 import FishInput from '../components/FishInput'
 import Pipeline from '../components/Pipeline'
 import KeyPanel from '../components/KeyPanel'
@@ -12,6 +13,7 @@ export default function DashboardView({ crypto }) {
     <div className="grid">
       <div className="col left">
         <FishSource />
+        <AudioSource />
         <details className="panel override-panel">
           <summary className="panel-head">🔧 Manual fish override <span className="hint">(optional)</span></summary>
           <FishInput onValidated={crypto.setOverrideFish} />

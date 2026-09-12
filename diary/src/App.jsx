@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { downloadPackage, fetchDiaryState, parsePackageFile, readTextFile, streamPipeline } from './api'
+import { downloadPackage, fetchDiaryState, generateKeypair, parsePackageFile, readTextFile, streamPipeline } from './api'
 import './App.css'
 
 const FRESH_PLACEHOLDER = `Dear future me,
@@ -7,9 +7,7 @@ const FRESH_PLACEHOLDER = `Dear future me,
 I hid the spare fish flakes behind the power strip.
 Do not tell Fibonacci. He has a fragile ego.
 
-- me, trusting a fish (and a USB key) with my secrets`
-
-const CODE_HINT = 'your universal USB code (code.txt) — keep the ONLY copy on a USB stick'
+- me, trusting a fish (and my RSA private key) with my secrets`
 
 // Compact live log of the crypto pipeline events coming over SSE.
 function PipelineLog({ events }) {
@@ -44,9 +42,10 @@ export default function App() {
   const [hasStored, setHasStored] = useState(false)
   const [savedAt, setSavedAt] = useState(null)
   const [unlocked, setUnlocked] = useState(false)
+  const [keyExists, setKeyExists] = useState(false)
 
   const [diary, setDiary] = useState('')
-  const [code, setCode] = useState('')
+  const [privateKeyPem, setPrivateKeyPem] = useState('')
 
   const [saveLog, setSaveLog] = useState([])
   const [unlockLog, setUnlockLog] = useState([])
@@ -55,11 +54,14 @@ export default function App() {
   const [saveErr, setSaveErr] = useState('')
   const [unlockErr, setUnlockErr] = useState('')
 
+  const [genBusy, setGenBusy] = useState(false)
+  const [genErr, setGenErr] = useState('')
+
   const [lastPkg, setLastPkg] = useState(null)              // for the backup-export button
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [importErr, setImportErr] = useState('')
 
-  const codeRef = useRef(null)
+  const privateKeyRef = useRef(null)
   const importRef = useRef(null)
 
   async function refreshDiaryState() {
@@ -69,6 +71,7 @@ export default function App() {
       setHasStored(!!state.exists)
       setSavedAt(state.saved_at || null)
       setLastPkg(state.exists ? state.package : null)
+      setKeyExists(!!state.encryption_key_exists)
     } catch {
       // server not reachable yet / transient — leave state as-is, user can retry
     } finally {
@@ -81,24 +84,43 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function onLoadCode(e) {
+  async function onLoadPrivateKey(e) {
     const file = e.target.files?.[0]
     if (!file) return
     const text = (await readTextFile(file)).trim()
-    setCode(text)
+    setPrivateKeyPem(text)
     e.target.value = ''
+  }
+
+  async function onGenerateKeypair() {
+    if (keyExists) {
+      const ok = window.confirm(
+        'A key already exists. Generating a new one makes any diary already ' +
+        'saved on this PC permanently unreadable (it was encrypted for the old key). Continue?'
+      )
+      if (!ok) return
+    }
+    setGenErr('')
+    setGenBusy(true)
+    try {
+      await generateKeypair(keyExists)
+      await refreshDiaryState()
+    } catch (err) {
+      setGenErr(String(err.message || err))
+    } finally {
+      setGenBusy(false)
+    }
   }
 
   async function save() {
     if (!diary.trim()) { setSaveErr('Write something first.'); return }
-    if (!code.trim()) { setSaveErr('Load your universal USB code (code.txt) first.'); return }
     setSaveStatus('running')
     setSaveErr('')
     setSaveLog([])
     try {
       const payload = await streamPipeline(
         '/api/diary/save',
-        { plaintext: diary, code: code.trim() },
+        { plaintext: diary },
         (evt) => setSaveLog((prev) => [...prev, evt]),
       )
       setSaveStatus('done')
@@ -114,14 +136,14 @@ export default function App() {
 
   async function unlock() {
     if (!hasStored) { setUnlockErr('Nothing saved on this PC yet.'); return }
-    if (!code.trim()) { setUnlockErr('Load your universal USB code (code.txt) first.'); return }
+    if (!privateKeyPem.trim()) { setUnlockErr('Load your RSA private key (private_key.pem) first.'); return }
     setUnlockStatus('running')
     setUnlockErr('')
     setUnlockLog([])
     try {
       const payload = await streamPipeline(
         '/api/diary/unlock',
-        { code: code.trim() },
+        { private_key_pem: privateKeyPem.trim() },
         (evt) => setUnlockLog((prev) => [...prev, evt]),
       )
       setDiary(payload.plaintext)
@@ -138,7 +160,7 @@ export default function App() {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    if (!code.trim()) { setImportErr('Load your universal USB code (code.txt) first.'); return }
+    if (!privateKeyPem.trim()) { setImportErr('Load your RSA private key (private_key.pem) first.'); return }
     setImportErr('')
     setUnlockStatus('running')
     setUnlockLog([])
@@ -146,7 +168,7 @@ export default function App() {
       const imported = await parsePackageFile(file)
       const payload = await streamPipeline(
         '/api/decrypt',
-        { package: imported, code: code.trim() },
+        { package: imported, private_key_pem: privateKeyPem.trim() },
         (evt) => setUnlockLog((prev) => [...prev, evt]),
       )
       setDiary(payload.plaintext)
@@ -167,11 +189,11 @@ export default function App() {
       <header className="topbar">
         <div>
           <h1>FISHRAND · DIARY</h1>
-          <p className="sub">a diary kept encrypted on this PC — only your USB code opens it</p>
+          <p className="sub">a diary kept encrypted on this PC — only your RSA private key opens it</p>
         </div>
         <nav className="nav">
           <span className="tag">save → stored encrypted, on this PC</span>
-          <span className="tag">unlock → USB code required</span>
+          <span className="tag">unlock → your private key required</span>
         </nav>
       </header>
 
@@ -190,7 +212,7 @@ export default function App() {
             spellCheck={false}
             placeholder={
               showLockedPlaceholder
-                ? '🔒 A diary is saved here, encrypted. Load your USB code and click Unlock to read it — or just start typing to overwrite it with a fresh entry.'
+                ? '🔒 A diary is saved here, encrypted. Load your private key and click Unlock to read it — or just start typing to overwrite it with a fresh entry.'
                 : 'Write your deepest secrets here…'
             }
             value={showFreshPlaceholder && diary === '' ? '' : diary}
@@ -203,26 +225,31 @@ export default function App() {
         <div className="diary-ctrl">
           <section className="panel">
             <div className="panel-head">
-              <h2>🔑 The universal USB code</h2>
+              <h2>🔑 Your RSA key</h2>
               <div className="panel-actions">
-                <button className="btn ghost" onClick={() => codeRef.current?.click()}>load code.txt</button>
-                <input ref={codeRef} type="file" accept=".txt" hidden onChange={onLoadCode} />
+                <button className="btn ghost" onClick={onGenerateKeypair} disabled={genBusy}>
+                  {genBusy ? 'Generating…' : keyExists ? '🔁 Generate new keypair' : '✨ Generate keypair'}
+                </button>
+                <button className="btn ghost" onClick={() => privateKeyRef.current?.click()}>load private_key.pem</button>
+                <input ref={privateKeyRef} type="file" accept=".pem,.txt" hidden onChange={onLoadPrivateKey} />
               </div>
             </div>
-            <textarea
-              className="mono"
-              rows={2}
-              spellCheck={false}
-              placeholder={CODE_HINT}
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
+            <div className="row-between">
+              <span className={`tag ${keyExists ? 'ok' : 'bad'}`}>
+                {keyExists ? '✓ this PC has an encryption key' : 'no encryption key yet — generate one'}
+              </span>
+              {privateKeyPem && <span className="tag ok">🔑 private key loaded</span>}
+            </div>
+            {genErr && <div className="tag bad big">{genErr.slice(0, 160)}</div>}
             <p className="hint">
-              generated once with <code>python cli.py init --dir /media/USB</code>.
-              This one code unlocks <em>any</em> message the fish encrypts. A browser page
-              cannot actually verify a file came from a USB device — nothing enforces that
-              you keep it there, only your own habit does. What the page <em>does</em> verify
-              cryptographically: whether this code is the right one (wrong code is always rejected).
+              <strong>Generate keypair</strong> makes a fresh RSA-3072 keypair: the server keeps only
+              the <em>public</em> half (it can encrypt, never decrypt) and your browser immediately
+              downloads the <em>private</em> half as <code>private_key.pem</code> — move it to a USB
+              stick, it is never saved on this PC. <strong>load private_key.pem</strong> feeds that
+              file back in when you want to unlock. A browser page cannot actually verify a file came
+              from a USB device — nothing enforces that you keep it there, only your own habit does.
+              What the page <em>does</em> verify cryptographically: whether this is the right key
+              (a wrong or missing key is always rejected).
             </p>
           </section>
 
@@ -235,7 +262,7 @@ export default function App() {
               <div className="pkg-shape mono">
                 <span>💾 stored on this PC{savedAt ? ` · ${new Date(savedAt).toLocaleTimeString()}` : ''}</span>
                 <span>version {lastPkg.version} · nonce {String(lastPkg.nonce_b64).slice(0, 8)}…</span>
-                <span>secret on disk: {lastPkg.version === 1 ? 'YES (v1 demo — avoid for real use)' : 'NO (USB code only)'}</span>
+                <span>secret on disk: NO — RSA-wrapped session key only</span>
               </div>
             )}
             {saveErr && <div className="tag bad big">{saveErr.slice(0, 160)}</div>}
@@ -245,7 +272,7 @@ export default function App() {
           <section className="panel">
             <h2>🔓 Unlock (read the saved diary)</h2>
             <button className="btn" onClick={unlock} disabled={unlockStatus === 'running' || !hasStored}>
-              {unlockStatus === 'running' ? 'Unlocking…' : hasStored ? '🔓 Unlock with this code' : 'nothing saved yet'}
+              {unlockStatus === 'running' ? 'Unlocking…' : hasStored ? '🔓 Unlock with this key' : 'nothing saved yet'}
             </button>
             {unlockStatus === 'done' && unlocked && (
               <div className="tag ok big">✓ AUTHENTICATED — diary released into the editor above</div>
@@ -272,7 +299,7 @@ export default function App() {
                 </button>
                 <input ref={importRef} type="file" accept=".pkg,.json,application/json" hidden onChange={onImportPackage} />
                 <p className="hint">
-                  Import decrypts an exported backup with the loaded USB code and drops it into the
+                  Import decrypts an exported backup with the loaded private key and drops it into the
                   editor above — click Save afterwards to make it the diary stored on this PC.
                 </p>
                 {importErr && <div className="tag big">{importErr.slice(0, 200)}</div>}
@@ -283,8 +310,8 @@ export default function App() {
       </div>
 
       <footer className="foot">
-        <span className="tag">the fish signs the window → the USB code holds the secret</span>
-        <span className="hint">v3 packages store no secret on disk: the fish chains the key, and code.txt holds the door.</span>
+        <span className="tag">the fish is audit metadata → your RSA key holds the secret</span>
+        <span className="hint">v4 packages store no secret on disk: an RSA-wrapped session key only — losing the private key means the entry is genuinely unrecoverable.</span>
       </footer>
     </div>
   )

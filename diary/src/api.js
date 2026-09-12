@@ -36,6 +36,37 @@ export function downloadPackage(pkg, name) {
   URL.revokeObjectURL(url)
 }
 
+// POST /api/keys/generate. The server makes a fresh RSA-3072 keypair,
+// keeps ONLY the public key, and hands back the private key PEM directly
+// in the response body — never saved server-side. We trigger an ordinary
+// browser download of it as private_key.pem, mirroring downloadPackage().
+// `force: true` is required if a public key already exists (regenerating
+// orphans any diary already encrypted with the old key).
+export async function generateKeypair(force = false) {
+  const res = await fetch(`${API_BASE}/api/keys/generate`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ force }),
+  })
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`
+    try {
+      const err = await res.json()
+      detail = err.detail || detail
+    } catch { /* ignore */ }
+    throw new Error(detail)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'private_key.pem'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 // Post to /api/encrypt or /api/decrypt, streaming `pipe` events to onPipe;
 // resolves with the `done` frame payload, throwing on `rejected`.
 export async function streamPipeline(path, body, onPipe) {

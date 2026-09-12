@@ -13,6 +13,8 @@ Endpoints:
     GET  /api/events           persistent SSE stream: fish_update events
     POST /api/observations     push channel for the vision engine's output
     GET  /api/observations/current
+    GET  /api/audio/events     persistent SSE stream: audio_update events
+    GET  /api/audio/current    latest ESP32 mic window (dashboard display)
     POST /api/keys/generate    body {force?}; makes an RSA-3072 keypair,
                                stores ONLY the public key, and returns the
                                private key PEM as a download (never saved).
@@ -30,6 +32,20 @@ Endpoints:
     POST /api/diary/unlock     body {private_key_pem}; decrypts the stored
                                document in place (SSE).
 
+LIVE DASHBOARD FEEDS:
+    Two daemon background threads (started in the FastAPI lifespan below)
+    keep the dashboard's "live" panels populated without any user action:
+      - fish poller: re-checks the configured fish source(s) every
+        config.VISION_POLL_INTERVAL_S seconds and republishes to the same
+        broker/SSE stream a manual POST /api/observations would use.
+      - audio poller: only runs if config.AUDIO_SERIAL_PORT is configured;
+        holds the ESP32 serial port open and continuously republishes each
+        Sound_Level window to its own broker/SSE stream.
+    Both are display-only conveniences - _resolve_fish()/_resolve_audio()
+    (used by actual encryption) simply read whatever these pollers last
+    published, same as before a manual push, so encryption behaviour is
+    unchanged by their presence.
+
 Run:  uvicorn server.main:app --reload --port 8000
 """
 
@@ -37,9 +53,13 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import hashlib
 import json
 import os
+import statistics
+import sys
 import threading
+from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
 
 from fastapi import FastAPI, HTTPException
@@ -66,10 +86,114 @@ from fishrand.rsa_hybrid import (
 from fishrand.schema import SchemaError, validate_observations
 
 from . import config
-from .audio_serial import SerialReaderError
+from .audio_serial import ESP32SerialReader, SerialReaderConfig, SerialReaderError, to_audio_observation
 from .collector import FishSourceError, collect_fish_verbose, current_source, _normalize_raw
 
-app = FastAPI(title="FISHRAND", version=fishrand.__version__)
+# --------------------------------------------------------------------------
+# Background dashboard-feed pollers (fish + audio) - see module docstring.
+# --------------------------------------------------------------------------
+_LOOP: asyncio.AbstractEventLoop | None = None
+_STOP_EVENT = threading.Event()
+_AUDIO_PORT_LOCK = threading.Lock()  # only one thing may hold the ESP32 serial port at a time
+
+
+def _schedule(fn, *args) -> None:
+    """Run fn(*args) on the FastAPI event loop thread, safe to call from a
+    background poller thread (asyncio.Queue is not thread-safe on its own).
+    Falls back to calling directly if the loop isn't known yet (e.g. a
+    request handled before lifespan startup finished, or in tests that
+    call broker functions without ever starting the app)."""
+    if _LOOP is not None:
+        _LOOP.call_soon_threadsafe(fn, *args)
+    else:
+        fn(*args)
+
+
+def _fish_poll_loop() -> None:
+    """Re-check the configured fish source(s) periodically and republish
+    only when the window actually changed, so the dashboard's live feed
+    panel updates on its own. Never raises - a transient collection
+    failure just gets retried next tick."""
+    last_fingerprint: str | None = None
+    while not _STOP_EVENT.is_set():
+        try:
+            data, source = collect_fish_verbose()
+            fingerprint = hashlib.sha256(
+                json.dumps(data, sort_keys=True, default=str).encode("utf-8")
+            ).hexdigest()
+            if fingerprint != last_fingerprint:
+                last_fingerprint = fingerprint
+                _publish(data, source)
+        except FishSourceError:
+            pass  # no source available yet (e.g. vision.py not running) - routine, retry next tick
+        except Exception as exc:  # never let a poll hiccup kill the background thread
+            print(f"[fish-poll] unexpected error: {exc}", file=sys.stderr)
+        _STOP_EVENT.wait(config.VISION_POLL_INTERVAL_S)
+
+
+def _capture_live_audio() -> tuple[dict, str]:
+    """Block for one ESP32 audio window (one-shot open/read/close). Raises
+    SerialReaderError if the port is unavailable. Shared by the encrypt-time
+    fallback in _resolve_audio() and (via a persistent connection instead of
+    reopening each window) the audio poll loop below."""
+    cfg = SerialReaderConfig(
+        port=config.AUDIO_SERIAL_PORT,
+        baud_rate=config.AUDIO_BAUD_RATE,
+        window_duration_s=config.AUDIO_WINDOW_DURATION_S,
+        min_readings=config.AUDIO_MIN_READINGS,
+    )
+    with _AUDIO_PORT_LOCK:
+        with ESP32SerialReader(cfg) as reader:
+            readings = reader.read_window()
+    return to_audio_observation(readings, window_duration_s=cfg.window_duration_s), f"live:{config.AUDIO_SERIAL_PORT}"
+
+
+def _audio_poll_loop() -> None:
+    """Hold the ESP32 serial port open and continuously republish windows
+    to the dashboard's live mic panel. Only started if config.AUDIO_SERIAL_PORT
+    is set. Keeps ONE connection open across windows (rather than
+    open/read/close per window like _capture_live_audio) so it doesn't
+    repeatedly toggle the USB-serial line and risk tripping the ESP32's
+    auto-reset circuit every poll tick."""
+    cfg = SerialReaderConfig(
+        port=config.AUDIO_SERIAL_PORT,
+        baud_rate=config.AUDIO_BAUD_RATE,
+        window_duration_s=config.AUDIO_WINDOW_DURATION_S,
+        min_readings=config.AUDIO_MIN_READINGS,
+    )
+    while not _STOP_EVENT.is_set():
+        try:
+            with _AUDIO_PORT_LOCK:
+                with ESP32SerialReader(cfg) as reader:
+                    while not _STOP_EVENT.is_set():
+                        readings = reader.read_window()
+                        data = to_audio_observation(readings, window_duration_s=cfg.window_duration_s)
+                        _publish_audio(data, f"live:{config.AUDIO_SERIAL_PORT}")
+        except SerialReaderError as exc:
+            print(f"[audio-poll] {exc}; retrying in 2s", file=sys.stderr)
+            _STOP_EVENT.wait(2.0)
+        except Exception as exc:
+            print(f"[audio-poll] unexpected error: {exc}", file=sys.stderr)
+            _STOP_EVENT.wait(2.0)
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    global _LOOP
+    _LOOP = asyncio.get_running_loop()
+    _STOP_EVENT.clear()
+    threads = [threading.Thread(target=_fish_poll_loop, name="fish-poll", daemon=True)]
+    if config.AUDIO_SERIAL_PORT:
+        threads.append(threading.Thread(target=_audio_poll_loop, name="audio-poll", daemon=True))
+    for t in threads:
+        t.start()
+    try:
+        yield
+    finally:
+        _STOP_EVENT.set()  # daemon threads; this just lets them exit their sleep promptly
+
+
+app = FastAPI(title="FISHRAND", version=fishrand.__version__, lifespan=_lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -89,7 +213,13 @@ _subscribers_lock = threading.Lock()
 
 
 def _publish(raw: dict, source: str) -> tuple[dict, str]:
-    """Store + broadcast a new observation window. Returns (window, source)."""
+    """Store + broadcast a new observation window. Returns (window, source).
+
+    Safe to call from a background poller thread as well as a request
+    handler (FastAPI runs sync `def` endpoints in a worker thread too) -
+    the actual queue fan-out is marshalled onto the event loop via
+    _schedule()/call_soon_threadsafe, since asyncio.Queue isn't safe to
+    push into from an arbitrary thread otherwise."""
     global _CURRENT, _CURRENT_SOURCE, _CURRENT_AT
     data = validate_observations(_normalize_raw(raw))
     _CURRENT = data
@@ -100,8 +230,12 @@ def _publish(raw: dict, source: str) -> tuple[dict, str]:
         "received_at": _CURRENT_AT,
         "metadata": observation_stats(data).to_dict(),
     }
-    for queue in list(_sse_subscribers):
-        queue.put_nowait({"event": "fish_update", "data": json.dumps(event)})
+
+    def _broadcast() -> None:
+        for queue in list(_sse_subscribers):
+            queue.put_nowait({"event": "fish_update", "data": json.dumps(event)})
+
+    _schedule(_broadcast)
     return data, source
 
 
@@ -126,6 +260,84 @@ async def _sse_broadcast() -> AsyncIterator[dict]:
     finally:
         with _subscribers_lock:
             _sse_subscribers.discard(queue)
+
+
+# --------------------------------------------------------------------------
+# Live audio broker: latest validated ESP32 mic window + SSE fan-out.
+# Mirrors the fish broker above; kept separate because a package can be
+# GOOD-quality fish-only with no audio at all, so the two need independent
+# "do we have one yet" states.
+# --------------------------------------------------------------------------
+_CURRENT_AUDIO: dict | None = None
+_CURRENT_AUDIO_SOURCE: str | None = None
+_CURRENT_AUDIO_AT: str | None = None
+_audio_sse_subscribers: set[asyncio.Queue] = set()
+
+# How long a cached audio window is still trusted for encryption before
+# _resolve_audio() falls back to a fresh capture - a few window-lengths, so
+# a briefly-slow poll tick doesn't force a redundant capture, but an
+# actually-unplugged ESP32 doesn't get treated as "current" forever.
+_AUDIO_STALE_AFTER_S = config.AUDIO_WINDOW_DURATION_S * 4
+
+
+def _audio_stats(validated_audio: dict) -> dict:
+    """Dashboard-only metadata for an audio window - not covered by
+    fishrand.observe.observation_stats (that module only knows the fish
+    'samples'/'frames' shapes, not the audio 'readings' shape)."""
+    readings = validated_audio.get("readings", [])
+    values = [r["value"] for r in readings]
+    return {
+        "derived_by": "audio_serial",
+        "reading_count": len(values),
+        "window_duration_s": validated_audio.get("window_duration_s"),
+        "mean_level": round(statistics.fmean(values), 2) if values else None,
+        "min_level": min(values) if values else None,
+        "max_level": max(values) if values else None,
+    }
+
+
+def _publish_audio(raw: dict, source: str) -> tuple[dict, str]:
+    """Store + broadcast a new ESP32 audio window. Returns (window, source)."""
+    global _CURRENT_AUDIO, _CURRENT_AUDIO_SOURCE, _CURRENT_AUDIO_AT
+    data = validate_observations(raw)
+    _CURRENT_AUDIO = data
+    _CURRENT_AUDIO_SOURCE = source
+    _CURRENT_AUDIO_AT = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    event = {
+        "source": source,
+        "received_at": _CURRENT_AUDIO_AT,
+        "metadata": _audio_stats(data),
+    }
+
+    def _broadcast() -> None:
+        for queue in list(_audio_sse_subscribers):
+            queue.put_nowait({"event": "audio_update", "data": json.dumps(event)})
+
+    _schedule(_broadcast)
+    return data, source
+
+
+async def _audio_sse_broadcast() -> AsyncIterator[dict]:
+    queue: asyncio.Queue = asyncio.Queue()
+    with _subscribers_lock:
+        _audio_sse_subscribers.add(queue)
+    try:
+        if _CURRENT_AUDIO is not None:
+            yield {
+                "event": "audio_update",
+                "data": json.dumps({
+                    "source": _CURRENT_AUDIO_SOURCE,
+                    "received_at": _CURRENT_AUDIO_AT,
+                    "cached": True,
+                    "metadata": _audio_stats(_CURRENT_AUDIO),
+                }),
+            }
+        while True:
+            item = await queue.get()
+            yield item
+    finally:
+        with _subscribers_lock:
+            _audio_sse_subscribers.discard(queue)
 
 
 # --------------------------------------------------------------------------
@@ -219,6 +431,23 @@ def current_observations() -> dict:
     }
 
 
+@app.get("/api/audio/events")
+async def audio_events() -> EventSourceResponse:
+    return EventSourceResponse(_audio_sse_broadcast())
+
+
+@app.get("/api/audio/current")
+def current_audio() -> dict:
+    if _CURRENT_AUDIO is None:
+        raise HTTPException(status_code=404, detail="no audio received yet")
+    return {
+        "source": _CURRENT_AUDIO_SOURCE,
+        "received_at": _CURRENT_AUDIO_AT,
+        "observations": _CURRENT_AUDIO,
+        "metadata": _audio_stats(_CURRENT_AUDIO),
+    }
+
+
 def _sse_from_events(events: list[dict], final: dict) -> EventSourceResponse:
     async def gen() -> AsyncIterator[dict]:
         for event in events:
@@ -250,8 +479,13 @@ def _resolve_fish(fish_json: dict | None) -> tuple[dict, str]:
 def _resolve_audio(no_audio: bool, audio_json: dict | None) -> tuple[dict | None, str]:
     """Resolve the audio window for this encryption, mirroring _resolve_fish.
 
-    Priority: explicit override -> live ESP32 capture (if configured) ->
-    None. Never raises - an unavailable/unconfigured ESP32 just means no
+    Priority: explicit override -> fresh cached window from the background
+    audio poller (if one is running and recent) -> a fresh one-shot live
+    ESP32 capture (if configured) -> None. Preferring the cache means an
+    encrypt call doesn't have to block for a whole new window when the
+    poller already has one seconds old - same "what you see [on the
+    dashboard] is what gets encrypted" guarantee _resolve_fish() gives for
+    fish. Never raises - an unavailable/unconfigured ESP32 just means no
     audio for this session, and encrypt_with_observation() turns that into
     a clear error only if the fish quality actually required audio.
     """
@@ -259,26 +493,21 @@ def _resolve_audio(no_audio: bool, audio_json: dict | None) -> tuple[dict | None
         return audio_json, "override:request"
     if no_audio:
         return None, "disabled:no_audio"
+    if _CURRENT_AUDIO is not None and _CURRENT_AUDIO_AT is not None:
+        received = datetime.datetime.fromisoformat(_CURRENT_AUDIO_AT)
+        age_s = (datetime.datetime.now(datetime.timezone.utc) - received).total_seconds()
+        if age_s <= _AUDIO_STALE_AFTER_S:
+            return _CURRENT_AUDIO, _CURRENT_AUDIO_SOURCE or "live:cached"
     if not config.AUDIO_SERIAL_PORT:
         return None, "unconfigured"
-    from .audio_serial import ESP32SerialReader, SerialReaderConfig, to_audio_observation
-
-    cfg = SerialReaderConfig(
-        port=config.AUDIO_SERIAL_PORT,
-        baud_rate=config.AUDIO_BAUD_RATE,
-        window_duration_s=config.AUDIO_WINDOW_DURATION_S,
-        min_readings=config.AUDIO_MIN_READINGS,
-    )
     try:
-        with ESP32SerialReader(cfg) as reader:
-            readings = reader.read_window()
+        return _capture_live_audio()
     except SerialReaderError as exc:
         return None, f"unavailable:{exc}"
-    return to_audio_observation(readings, window_duration_s=cfg.window_duration_s), f"live:{config.AUDIO_SERIAL_PORT}"
 
 
 def _run_encrypt(
-    fish_data: dict, source: str, plaintext: str, code: str | None, audio_data: dict | None = None,
+    fish_data: dict, source: str, plaintext: str, public_key: Any, audio_data: dict | None = None,
     audio_source: str = "unconfigured",
 ) -> tuple[list[dict], dict]:
     """Shared encrypt body for /api/encrypt and /api/diary/save.
@@ -292,46 +521,37 @@ def _run_encrypt(
         "status": "ok",
         "detail": {"source": source, "units": count_observations(fish_data), "audio_source": audio_source},
     }]
-    if code:
-        # v5 (fish/audio observation-mode) never embeds a secret, so mode
-        # selection only applies with a USB code; without one this stays
-        # the untouched v1 self-contained demo path (audio doesn't apply).
-        package = encrypt_with_observation(
-            fish_data,
-            plaintext,
-            audio_observations=audio_data,
-            session_code=code,
-            emit=lambda *a: events.append(_to_event(a)),
-        )
-    else:
-        package = encrypt_with_fish_entropy(
-            fish_data,
-            plaintext,
-            session_code=None,
-            emit=lambda *a: events.append(_to_event(a)),
-        )
-    # Bind the fish window into the package so decrypt uses the SAME fish.
-    package["metadata"]["fish_observations"] = fish_data
+    package = encrypt_with_observation(
+        fish_data,
+        plaintext,
+        public_key=public_key,
+        audio_observations=audio_data,
+        emit=lambda *a: events.append(_to_event(a)),
+    )
     package["metadata"]["fish_source"] = source
     return events, package
 
 
-def _run_decrypt(fish_data: dict, package: dict, source: str, bound: str, code: str | None) -> tuple[list[dict], dict]:
+def _run_decrypt(package: dict, private_key: Any) -> tuple[list[dict], dict]:
     """Shared decrypt body for /api/decrypt and /api/diary/unlock.
 
     Returns (pipeline_events, final_status_dict) — final is either
     {"status": "decrypted", "plaintext": ...} or {"status": "rejected",
     "reason": ...}; never raises AuthenticationFailure (converted to the
-    rejected status so the SSE stream always completes cleanly). Raises
-    SchemaError/ValueError on malformed fish data or package (caller maps
-    those to a 422).
+    rejected status so the SSE stream always completes cleanly). Only the
+    RSA private key is needed - no fish/audio window, regardless of which
+    observation_mode encrypted the package. May raise ValueError for the
+    caller to map to a 422 (malformed package).
     """
-    events: list[dict] = [{"step": "collect", "status": "ok", "detail": {"source": source, "bound": bound}}]
+    events: list[dict] = [{
+        "step": "collect",
+        "status": "ok",
+        "detail": {"observation_mode": package.get("metadata", {}).get("observation_mode")},
+    }]
     try:
-        plaintext = decrypt_package(
-            fish_data,
+        plaintext = decrypt_rsa_hybrid_package(
             package,
-            session_code=code,
+            private_key=private_key,
             emit=lambda *a: events.append(_to_event(a)),
         )
     except AuthenticationFailure as exc:
@@ -344,39 +564,35 @@ def _run_decrypt(fish_data: dict, package: dict, source: str, bound: str, code: 
     return events, {"status": "decrypted", "plaintext": plaintext.decode("utf-8")}
 
 
-def _run_decrypt_v5(
-    package: dict, fish_data: dict | None, audio_data: dict | None, code: str | None
-) -> tuple[list[dict], dict]:
-    """Shared v5 (observation-mode) decrypt body for /api/decrypt and
-    /api/diary/unlock. Mirrors _run_decrypt's contract: never raises
-    AuthenticationFailure/ObservationModeMismatch (converted to a
-    "rejected" status), may raise SchemaError/ValueError for the caller to
-    map to a 422."""
-    events: list[dict] = [{
-        "step": "collect",
-        "status": "ok",
-        "detail": {
-            "observation_mode": package.get("observation_mode"),
-            "fish": fish_data is not None,
-            "audio": audio_data is not None,
-        },
-    }]
-    try:
-        plaintext = decrypt_observation_package(
-            package,
-            fish_observations=fish_data,
-            audio_observations=audio_data,
-            session_code=code,
-            emit=lambda *a: events.append(_to_event(a)),
+@app.post("/api/keys/generate")
+def generate_keys(body: GenerateKeysRequest) -> Response:
+    """Generate a fresh RSA-3072 keypair. Stores ONLY the public key on
+    disk; the private key PEM is returned directly in the response body
+    (never logged, cached, or written server-side) so the browser can
+    download it immediately as private_key.pem.
+
+    409 if a public key already exists and `force` wasn't passed -
+    regenerating orphans any diary already encrypted with the old key.
+    """
+    if config.PUBLIC_KEY_PATH.exists() and not body.force:
+        raise HTTPException(
+            status_code=409,
+            detail="a public key already exists — pass force=true to regenerate "
+                   "(this orphans any diary already encrypted with the old key)",
         )
-    except (AuthenticationFailure, ObservationModeMismatch) as exc:
-        events.append({
-            "step": "aes_gcm",
-            "status": "error",
-            "detail": {"reason": "REJECTED", "message": str(exc)},
-        })
-        return events, {"status": "rejected", "reason": str(exc)}
-    return events, {"status": "decrypted", "plaintext": plaintext.decode("utf-8")}
+
+    private_key, public_key = generate_keypair()
+    config.PUBLIC_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(config.PUBLIC_KEY_PATH.parent, 0o700)
+    config.PUBLIC_KEY_PATH.write_bytes(serialize_public_key(public_key))
+    os.chmod(config.PUBLIC_KEY_PATH, 0o644)  # public key: fine to be world-readable
+
+    private_pem = serialize_private_key(private_key, None)
+    return Response(
+        content=private_pem,
+        media_type="application/x-pem-file",
+        headers={"Content-Disposition": 'attachment; filename="private_key.pem"'},
+    )
 
 
 @app.post("/api/encrypt")
@@ -384,15 +600,15 @@ def encrypt_endpoint(body: FishRequest) -> EventSourceResponse:
     if body.plaintext is None or body.plaintext == "":
         raise HTTPException(status_code=422, detail="plaintext is required")
 
+    public_key = _server_public_key()
     try:
         fish_data, source = _resolve_fish(body.fish_json)
     except FishSourceError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     audio_data, audio_source = _resolve_audio(body.no_audio, body.audio_json)
 
-    code = body.code or _configured_code()
     try:
-        events, package = _run_encrypt(fish_data, source, body.plaintext, code, audio_data, audio_source)
+        events, package = _run_encrypt(fish_data, source, body.plaintext, public_key, audio_data, audio_source)
     except (SchemaError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -404,34 +620,10 @@ def decrypt_endpoint(body: DecryptRequest) -> EventSourceResponse:
     if body.package is None:
         raise HTTPException(status_code=422, detail="package is required")
 
-    if body.package.get("version") == 5:
-        fish_data = body.fish_json if body.fish_json is not None else body.package.get("metadata", {}).get("fish_observations")
-        audio_data = body.audio_json if body.audio_json is not None else body.package.get("metadata", {}).get("audio_observations")
-        code = body.code or _configured_code()
-        try:
-            events, final = _run_decrypt_v5(body.package, fish_data, audio_data, code)
-        except (SchemaError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        return _sse_from_events(events, final)
-
-    if body.fish_json is not None:
-        fish_data, fish_source, bound = body.fish_json, "override:request", "override"
-    else:
-        bound_data = body.package.get("metadata", {}).get("fish_observations")
-        if bound_data is None:
-            raise HTTPException(
-                status_code=422,
-                detail="package has no bound fish_observations (created by an older client); "
-                       "resend fish_json to decrypt",
-            )
-        fish_data = bound_data
-        fish_source = body.package.get("metadata", {}).get("fish_source", "package")
-        bound = "package"
-
-    code = body.code or _configured_code()
+    private_key = _caller_private_key(body.private_key_pem)
     try:
-        events, final = _run_decrypt(fish_data, body.package, fish_source, bound, code)
-    except (SchemaError, ValueError) as exc:
+        events, final = _run_decrypt(body.package, private_key)
+    except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _sse_from_events(events, final)
 
@@ -448,9 +640,9 @@ def _read_diary_package() -> dict:
     form — the same shape /api/encrypt returns and /api/decrypt accepts.
 
     NOT fishrand.package.load_package(): that decodes straight to raw
-    bytes fields, which is what decrypt_package() wants internally but
-    can't be JSON-serialized back to the browser (this is exactly what
-    GET /api/diary needs to hand over as-is).
+    bytes fields, which is what decrypt_rsa_hybrid_package() wants
+    internally but can't be JSON-serialized back to the browser (this is
+    exactly what GET /api/diary needs to hand over as-is).
     """
     return json.loads(config.DIARY_PATH.read_text(encoding="utf-8"))
 
@@ -458,38 +650,48 @@ def _read_diary_package() -> dict:
 @app.get("/api/diary")
 def diary_state() -> dict:
     """State of the diary app's one persistent document. Ciphertext +
-    public metadata only — safe to return without any code, same trust
-    model as handing someone a .pkg file."""
+    public metadata only — safe to return to anyone, same trust model as
+    handing someone a .pkg file. `encryption_key_exists` tells the
+    frontend whether to offer "generate a key" or "load your key"."""
+    key_exists = config.PUBLIC_KEY_PATH.exists()
     if not config.DIARY_PATH.exists():
-        return {"exists": False}
+        return {"exists": False, "encryption_key_exists": key_exists}
     try:
         package = _read_diary_package()
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=500, detail=f"stored diary is unreadable: {exc}") from exc
-    return {"exists": True, "package": package, "saved_at": _diary_saved_at()}
+    return {
+        "exists": True,
+        "package": package,
+        "saved_at": _diary_saved_at(),
+        "encryption_key_exists": key_exists,
+    }
 
 
 @app.post("/api/diary/save")
 def diary_save(body: DiarySaveRequest) -> EventSourceResponse:
     """Encrypt body.plaintext (same fish-collection + crypto path as
-    /api/encrypt) and OVERWRITE the one persistent document on disk."""
+    /api/encrypt) and OVERWRITE the one persistent document on disk. No
+    secret needed client-side to encrypt: anyone holding the public key
+    can - that's the point of the RSA split."""
     if not body.plaintext:
         raise HTTPException(status_code=422, detail="plaintext is required")
 
+    public_key = _server_public_key()
     try:
         fish_data, source = _resolve_fish(None)
     except FishSourceError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     audio_data, audio_source = _resolve_audio(body.no_audio, None)
 
-    code = body.code or _configured_code()
     try:
-        events, package = _run_encrypt(fish_data, source, body.plaintext, code, audio_data, audio_source)
+        events, package = _run_encrypt(fish_data, source, body.plaintext, public_key, audio_data, audio_source)
     except (SchemaError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     config.DIARY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    save_package(package, config.DIARY_PATH)
+    os.chmod(config.DIARY_PATH.parent, 0o700)
+    save_package(package, str(config.DIARY_PATH))  # save_package chmod 0o600s the file itself
     events.append({
         "step": "persist",
         "status": "ok",
@@ -500,8 +702,9 @@ def diary_save(body: DiarySaveRequest) -> EventSourceResponse:
 
 @app.post("/api/diary/unlock")
 def diary_unlock(body: DiaryUnlockRequest) -> EventSourceResponse:
-    """Decrypt the one persistent document in place, using its own bound
-    fish window (exactly like /api/decrypt does for an uploaded package)."""
+    """Decrypt the one persistent document in place. Only the caller's RSA
+    private key is used, in memory, for this one request - never written
+    to disk, logged, or cached."""
     if not config.DIARY_PATH.exists():
         raise HTTPException(status_code=404, detail="no diary saved on this PC yet")
     try:
@@ -509,28 +712,10 @@ def diary_unlock(body: DiaryUnlockRequest) -> EventSourceResponse:
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=500, detail=f"stored diary is unreadable: {exc}") from exc
 
-    code = body.code or _configured_code()
-
-    if package.get("version") == 5:
-        fish_data = package.get("metadata", {}).get("fish_observations")
-        audio_data = package.get("metadata", {}).get("audio_observations")
-        try:
-            events, final = _run_decrypt_v5(package, fish_data, audio_data, code)
-        except (SchemaError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        return _sse_from_events(events, final)
-
-    bound_data = package.get("metadata", {}).get("fish_observations")
-    if bound_data is None:
-        raise HTTPException(
-            status_code=422,
-            detail="stored diary has no bound fish_observations (corrupt, or saved by an older client)",
-        )
-    fish_source = package.get("metadata", {}).get("fish_source", "package")
-
+    private_key = _caller_private_key(body.private_key_pem)
     try:
-        events, final = _run_decrypt(bound_data, package, fish_source, "package", code)
-    except (SchemaError, ValueError) as exc:
+        events, final = _run_decrypt(package, private_key)
+    except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _sse_from_events(events, final)
 

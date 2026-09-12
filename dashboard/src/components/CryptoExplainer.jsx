@@ -20,26 +20,26 @@ const STAGES = [
   {
     n: '4',
     title: 'OS CSPRNG — the trusted randomness',
-    body: 'The operating system\'s cryptographically secure random generator provides 32 bytes. This is the actual source of secrecy in the whole system.',
+    body: 'The operating system\'s cryptographically secure random generator provides a fresh 32-byte session secret for every message. This is the actual source of secrecy - and it is discarded the moment it has been wrapped in step 6.',
     real: 'secrets.token_bytes()',
   },
   {
     n: '5',
     title: 'HKDF-SHA256 — cryptographic mixing',
-    body: 'Fish digest + OS randomness are combined with a standard KDF, using the explicit info string "FISHRAND-AES256-GCM-v1" so the material can never be reused for another purpose.',
+    body: 'Fish digest + the fresh OS secret are combined with a standard KDF, using the explicit info string "FISHRAND-AES256-GCM-v4-rsa-hybrid" so the material can never be reused for another purpose.',
     real: 'domain-separated key derivation',
   },
   {
     n: '6',
-    title: 'AES-256-GCM — encrypt + authenticate',
-    body: 'A fresh 12-byte nonce and the 256-bit key encrypt the diary. AAD (authenticated metadata) is bound to the ciphertext. Confidentiality, integrity and authentication in one pass.',
-    real: 'no ECB · tamperproof tag',
+    title: 'AES-256-GCM + RSA-OAEP — encrypt, then wrap the key',
+    body: 'A fresh 12-byte nonce and the 256-bit key encrypt the diary (AAD is bound to the ciphertext). The session key is then wrapped with your RSA-3072 public key - only the matching private key can ever unwrap it.',
+    real: 'no ECB · tamperproof tag · asymmetric key wrap',
   },
   {
     n: '7',
-    title: 'Package — bound to the fish window',
-    body: 'A self-contained JSON envelope holds ciphertext + tag, nonce, AAD and the fish window that produced the key. The secret AES key is never stored anywhere.',
-    real: 'decrypt re-derives the key from this + the OS secret',
+    title: 'Package — no secret stored, ever',
+    body: 'A self-contained JSON envelope holds ciphertext + tag, nonce, AAD, and the RSA-wrapped session key. Decrypting needs ONLY your RSA private key - the fish window is never needed again.',
+    real: 'losing the private key means the entry is unrecoverable, by design',
   },
 ]
 

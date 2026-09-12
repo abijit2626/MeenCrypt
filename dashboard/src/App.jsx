@@ -21,7 +21,7 @@ export default function App() {
       <DashboardView crypto={crypto} />
 
       <footer className="foot">
-        <span className="tag">the fish contributes → the USB code holds the secret</span>
+        <span className="tag">the fish contributes → your RSA private key holds the secret</span>
         <span className="hint">fish data is conditioned (SHA-256), not trusted entropy. AES key stays HIDDEN.</span>
       </footer>
     </div>

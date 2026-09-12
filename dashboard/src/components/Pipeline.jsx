@@ -1,17 +1,18 @@
 import { useEffect, useRef } from 'react'
 
-const STEPS = ['validation', 'canonicalization', 'conditioning', 'os_csprng', 'fish_chain', 'kdf', 'fish_commit', 'aes_gcm', 'package', 'decrypt']
+const STEPS = ['fish_quality', 'validation', 'canonicalization', 'conditioning', 'os_csprng', 'kdf', 'aes_gcm', 'rsa_wrap', 'package', 'rsa_unwrap', 'decrypt']
 
 const LABELS = {
+  fish_quality: 'Fish-quality classifier',
   validation: 'Input contract',
   canonicalization: 'Canonicalization',
   conditioning: 'SHA-256 conditioning',
-  os_csprng: 'OS CSPRNG / USB code',
-  fish_chain: 'Fish-chain key schedule',
+  os_csprng: 'OS CSPRNG session secret',
   kdf: 'HKDF key derivation',
-  fish_commit: 'Fish commitment verify',
   aes_gcm: 'AES-256-GCM',
+  rsa_wrap: 'RSA-OAEP wrap (public key)',
   package: 'Encrypted package',
+  rsa_unwrap: 'RSA-OAEP unwrap (private key)',
   decrypt: 'Decryption',
 }
 

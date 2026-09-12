@@ -3,7 +3,7 @@ import secrets
 import pytest
 
 from fishrand.crypto import InvalidTag, canonical_aad, decrypt, encrypt
-from fishrand.mixing import DOMAIN_INFO, KEY_BITS, derive_key
+from fishrand.mixing import RSA_HYBRID_INFO, KEY_BITS, derive_key
 from fishrand import cspng
 
 
@@ -39,7 +39,7 @@ class TestKeyDerivation:
     def test_derive_key_domain_separation(self):
         digest = secrets.token_bytes(32)
         osr = secrets.token_bytes(32)
-        a = derive_key(digest, osr, info=DOMAIN_INFO)
+        a = derive_key(digest, osr, info=RSA_HYBRID_INFO)
         b = derive_key(digest, osr, info="something-else")
         assert a != b
 

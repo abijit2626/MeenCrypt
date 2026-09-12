@@ -150,11 +150,12 @@ fi
 if [[ $CLI_TEST -eq 1 ]]; then
   USBDIR="$ROOT/.demo_usb"
   mkdir -p "$USBDIR"
-  [[ -f "$USBDIR/code.txt" ]] || "$PY" cli.py init --dir "$USBDIR"
+  [[ -f "$USBDIR/private_key.pem" ]] || "$PY" cli.py keygen --output "$USBDIR" --no-passphrase
   echo "[cli-test] encrypting examples/diary.txt with the live/inbox fish window..."
-  "$PY" cli.py encrypt --diary examples/diary.txt --usb "$USBDIR" --out "$USBDIR/diary.pkg"
+  "$PY" cli.py encrypt --diary examples/diary.txt \
+    --public-key "$USBDIR/public_key.pem" --out "$USBDIR/diary.pkg"
   echo "[cli-test] decrypting it back..."
-  "$PY" cli.py decrypt --pkg "$USBDIR/diary.pkg" --usb "$USBDIR"
+  "$PY" cli.py decrypt --pkg "$USBDIR/diary.pkg" --private-key "$USBDIR/private_key.pem"
   exit 0   # trap stops vision/server/web on the way out
 fi
 

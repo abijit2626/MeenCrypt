@@ -4,9 +4,14 @@ __pycache__/
 .pytest_cache/
 dashboard/node_modules/
 dashboard/dist/
+diary/node_modules/
+diary/dist/
 *.pkg
-code.txt
 *.pem
 keys/
 usb/
 private_key*
+fish_log.json
+logs/
+data/
+.run/

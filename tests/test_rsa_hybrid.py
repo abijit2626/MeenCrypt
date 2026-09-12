@@ -1,7 +1,8 @@
-"""Tests for the RSA-OAEP hybrid pipeline (package version 4).
+"""Tests for the RSA-OAEP hybrid pipeline (package version 4) - the only
+encryption path fishrand supports.
 
-Mirrors the style of test_api.py: same VALID fish fixture, same
-tamper-detection pattern via parse_package()/rebuilding a b64 field.
+Same VALID fish fixture and tamper-detection pattern throughout: decode
+via parse_package(), flip a byte, rebuild the b64 field, expect rejection.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ import base64
 import inspect
 import json
 import pathlib
+import stat as stat_module
 import sys
 
 import pytest
@@ -23,7 +25,6 @@ import cli as fishrand_cli  # noqa: E402  (needs REPO_ROOT on sys.path first)
 from fishrand import (  # noqa: E402
     AuthenticationFailure,
     decrypt_rsa_hybrid_package,
-    encrypt_with_fish_entropy,
     encrypt_with_rsa_hybrid,
 )
 from fishrand.package import build_package, parse_package  # noqa: E402
@@ -60,6 +61,23 @@ VALID = {
 }
 
 DIARY = b"BUY MILK, EGGS AND MAGGI"
+
+# GOOD-quality fish window (v2 frames, >=2 fish/>=5% activity - see
+# fishrand/quality.py) for the CLI roundtrip tests below: cli.py's `encrypt`
+# always goes through the adaptive encrypt_with_observation() pipeline
+# (see cli.py cmd_encrypt), which requires audio_observations whenever the
+# fish quality classifies below GOOD. Using a GOOD window here keeps those
+# tests audio-free and focused on the RSA keygen/encrypt/decrypt path.
+CLI_GOOD_FISH = {
+    "schema_version": 2,
+    "source": "fish_vision",
+    "frames": [
+        {"timestamp": 1750000000.0, "fish_count": 2, "activity_pct": 20.0, "fish": [
+            {"id": 0, "centroid": [10.0, 20.0], "area": 100.0, "speed": 1.0, "direction_rad": 0.0},
+            {"id": 1, "centroid": [30.0, 40.0], "area": 90.0, "speed": 1.5, "direction_rad": 0.1},
+        ]},
+    ],
+}
 
 
 @pytest.fixture(scope="module")
@@ -123,6 +141,70 @@ class TestKeyGeneration:
         with pytest.raises(PrivateKeyNotFound):
             load_private_key(missing)
         assert not missing.exists()
+
+    def test_load_private_key_from_pem_roundtrip(self, keypair):
+        from fishrand.rsa_hybrid import load_private_key_from_pem
+
+        private_key, public_key = keypair
+        pem_text = serialize_private_key(private_key, None).decode("utf-8")
+        loaded = load_private_key_from_pem(pem_text)
+        aes_key = b"\x03" * 32
+        wrapped = wrap_session_key(public_key, aes_key)
+        assert unwrap_session_key(loaded, wrapped) == aes_key
+
+    def test_load_private_key_from_pem_never_touches_disk(self, keypair, tmp_path, monkeypatch):
+        from fishrand.rsa_hybrid import load_private_key_from_pem
+
+        private_key, _ = keypair
+        pem_text = serialize_private_key(private_key, None).decode("utf-8")
+        monkeypatch.chdir(tmp_path)
+        load_private_key_from_pem(pem_text)
+        assert list(tmp_path.iterdir()) == []
+
+    def test_load_private_key_from_pem_wrong_passphrase_rejected(self, keypair):
+        from fishrand.rsa_hybrid import load_private_key_from_pem
+
+        private_key, _ = keypair
+        pem_text = serialize_private_key(private_key, b"correct horse")
+        with pytest.raises(ValueError):
+            load_private_key_from_pem(pem_text, b"wrong passphrase")
+
+
+class TestKeygenFilePermissions:
+    def test_private_key_written_0600_by_cli_keygen(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        keys_dir = tmp_path / "keys"
+        assert fishrand_cli.main(["keygen", "--output", str(keys_dir), "--no-passphrase"]) == 0
+        priv_path = keys_dir / "private_key.pem"
+        assert priv_path.exists()
+        assert stat_module.S_IMODE(priv_path.stat().st_mode) == 0o600
+
+
+class TestAADRename:
+    """AAD_PURPOSE moved from "FISHRAND-DEMO" to "FISHRAND-DIARY-V1" - a
+    normal encrypt/decrypt roundtrip must still succeed with the new
+    default, and packages encrypted under the old purpose string must
+    still fail (proving the AAD is actually authenticated, not decorative).
+    """
+
+    def test_default_aad_purpose_is_diary_v1(self):
+        from fishrand.crypto import AAD_PURPOSE, canonical_aad
+
+        assert AAD_PURPOSE == "FISHRAND-DIARY-V1"
+        assert b"FISHRAND-DIARY-V1" in canonical_aad()
+
+    def test_roundtrip_survives_the_rename(self, keypair):
+        private_key, public_key = keypair
+        pkg = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        assert decrypt_rsa_hybrid_package(pkg, private_key=private_key) == DIARY
+
+    def test_old_purpose_string_no_longer_verifies(self, keypair):
+        from fishrand.crypto import canonical_aad
+
+        private_key, public_key = keypair
+        pkg = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
+        decoded = parse_package(pkg)
+        assert decoded["aad"] != canonical_aad(purpose="FISHRAND-DEMO")
 
 
 class TestHybridRoundtrip:
@@ -228,29 +310,22 @@ class TestPackageValidation:
         with pytest.raises(ValueError):
             parse_package(pkg)
 
-    def test_v4_rejects_os_random(self, keypair):
+    def test_v4_rejects_unsupported_version(self, keypair):
         _, public_key = keypair
         pkg = encrypt_with_rsa_hybrid(VALID, DIARY, public_key=public_key)
-        pkg["os_random_b64"] = base64.b64encode(b"\x00" * 32).decode()
+        pkg["version"] = 1
         with pytest.raises(ValueError):
             parse_package(pkg)
 
-    def test_only_v4_carries_encrypted_session_key(self):
-        pkg = encrypt_with_fish_entropy(VALID, DIARY)
-        pkg["encrypted_session_key_b64"] = base64.b64encode(b"\x00" * 32).decode()
-        with pytest.raises(ValueError):
-            parse_package(pkg)
-
-    def test_build_package_rejects_conflicting_secrets(self):
-        with pytest.raises(ValueError):
+    def test_build_package_requires_all_v4_fields(self):
+        with pytest.raises(TypeError):
             build_package(
                 fish_hash="a" * 64,
                 nonce=b"\x00" * 12,
                 ciphertext_blob=b"\x00" * 16,
                 aad=b"{}",
-                os_random=b"\x00" * 32,
                 kdf_context="x",
-                encrypted_session_key=b"\x00" * 32,
+                # encrypted_session_key / key_algorithm / rsa_key_size omitted
             )
 
 
@@ -282,7 +357,7 @@ class TestCLIRoundtrip:
         monkeypatch.chdir(tmp_path)
         keys_dir = tmp_path / "keys"
         fish_path = tmp_path / "fish.json"
-        fish_path.write_text(json.dumps(VALID), encoding="utf-8")
+        fish_path.write_text(json.dumps(CLI_GOOD_FISH), encoding="utf-8")
         out_path = tmp_path / "encrypted.pkg"
 
         assert fishrand_cli.main(["keygen", "--output", str(keys_dir), "--no-passphrase"]) == 0
@@ -310,7 +385,7 @@ class TestCLIRoundtrip:
         monkeypatch.chdir(tmp_path)
         keys_dir = tmp_path / "keys"
         fish_path = tmp_path / "fish.json"
-        fish_path.write_text(json.dumps(VALID), encoding="utf-8")
+        fish_path.write_text(json.dumps(CLI_GOOD_FISH), encoding="utf-8")
         out_path = tmp_path / "encrypted.pkg"
 
         fishrand_cli.main(["keygen", "--output", str(keys_dir), "--no-passphrase"])

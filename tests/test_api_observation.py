@@ -1,10 +1,11 @@
-"""Tests for the three-mode observation pipeline (fishrand/api.py
-encrypt_with_observation / decrypt_observation_package).
+"""Tests for the adaptive observation pipeline (fishrand/api.py
+encrypt_with_observation), on top of the RSA-OAEP hybrid scheme (package
+version 4) - the only encryption path fishrand supports.
 
-GOOD fish quality -> delegates unchanged to encrypt_with_fish_entropy /
-decrypt_package (the existing v1-v4 pipeline, untouched). MEDIUM -> fish +
-audio combined into a v5 "fish_audio" package. BAD -> audio alone into a
-v5 "audio" package.
+GOOD fish quality -> fish alone conditions the key (delegates to
+encrypt_with_rsa_hybrid). MEDIUM -> fish AND audio combined. BAD -> audio
+alone. Every mode produces the same v4 package and decrypts identically -
+with the RSA private key alone, no fish/audio needed at decrypt time.
 """
 
 from __future__ import annotations
@@ -14,10 +15,10 @@ import json
 
 import pytest
 
-from fishrand import AuthenticationFailure, ObservationModeMismatch
-from fishrand.api import decrypt_observation_package, encrypt_with_observation
-from fishrand.cspng import generate_usb_code
+from fishrand import AuthenticationFailure
+from fishrand.api import decrypt_rsa_hybrid_package, encrypt_with_observation
 from fishrand.entropy import audio_digest_bytes, fish_digest_bytes
+from fishrand.rsa_hybrid import generate_keypair
 
 DIARY = b"the fish and the mic guard this entry"
 
@@ -68,187 +69,170 @@ AUDIO = {
 }
 
 
-def _code():
-    return generate_usb_code()
+@pytest.fixture(scope="module")
+def keypair():
+    return generate_keypair()
 
 
-# --- GOOD: delegates to the untouched fish-only path ------------------
+@pytest.fixture(scope="module")
+def other_keypair():
+    return generate_keypair()
 
 
-class TestGoodModeDelegates:
-    def test_good_without_audio_produces_fish_chain_package(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_GOOD, DIARY, session_code=code)
-        assert pkg["version"] == 3  # v3 fish-chain, exactly like encrypt_with_fish_entropy alone
-        assert "observation_mode" not in pkg  # not a v5 package
+# --- GOOD: fish alone conditions the key --------------------------------
+
+
+class TestGoodModeFishOnly:
+    def test_good_without_audio_produces_v4_package(self, keypair):
+        _, public_key = keypair
+        pkg = encrypt_with_observation(FISH_GOOD, DIARY, public_key=public_key)
+        assert pkg["version"] == 4
+        assert pkg["metadata"]["observation_mode"] == "fish"
         assert pkg["metadata"]["fish_quality"] == "GOOD"
+        assert pkg["fish_hash"] == fish_digest_bytes(FISH_GOOD).hex()
 
-    def test_good_roundtrip(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_GOOD, DIARY, session_code=code)
-        assert decrypt_observation_package(pkg, fish_observations=FISH_GOOD, session_code=code) == DIARY
+    def test_good_roundtrip(self, keypair):
+        private_key, public_key = keypair
+        pkg = encrypt_with_observation(FISH_GOOD, DIARY, public_key=public_key)
+        assert decrypt_rsa_hybrid_package(pkg, private_key=private_key) == DIARY
 
-    def test_good_ignores_audio_even_if_given(self):
+    def test_good_ignores_audio_even_if_given(self, keypair):
         # Per spec: audio is NOT used as observation input in GOOD mode.
-        code = _code()
-        pkg_with_audio = encrypt_with_observation(FISH_GOOD, DIARY, audio_observations=AUDIO, session_code=code)
-        pkg_without_audio = encrypt_with_observation(FISH_GOOD, DIARY, session_code=code)
-        # Both are fish-only v3 packages; audio never entered the KDF, so
-        # neither package embeds it.
-        assert "audio_observations" not in pkg_with_audio["metadata"]
-        assert pkg_with_audio["version"] == pkg_without_audio["version"] == 3
+        _, public_key = keypair
+        pkg_with_audio = encrypt_with_observation(
+            FISH_GOOD, DIARY, public_key=public_key, audio_observations=AUDIO
+        )
+        pkg_without_audio = encrypt_with_observation(FISH_GOOD, DIARY, public_key=public_key)
+        assert "audio_hash" not in pkg_with_audio["metadata"]
+        assert pkg_with_audio["version"] == pkg_without_audio["version"] == 4
+        assert pkg_with_audio["metadata"]["observation_mode"] == "fish"
 
 
 # --- MEDIUM: fish + audio combined -------------------------------------
 
 
 class TestMediumModeFishAudio:
-    def test_produces_v5_fish_audio_package(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_MEDIUM, DIARY, audio_observations=AUDIO, session_code=code)
-        assert pkg["version"] == 5
-        assert pkg["observation_mode"] == "fish_audio"
+    def test_produces_v4_fish_audio_package(self, keypair):
+        _, public_key = keypair
+        pkg = encrypt_with_observation(
+            FISH_MEDIUM, DIARY, public_key=public_key, audio_observations=AUDIO
+        )
+        assert pkg["version"] == 4
+        assert pkg["metadata"]["observation_mode"] == "fish_audio"
         assert pkg["fish_hash"] == fish_digest_bytes(FISH_MEDIUM).hex()
-        assert pkg["audio_hash"] == audio_digest_bytes(AUDIO).hex()
+        assert pkg["metadata"]["audio_hash"] == audio_digest_bytes(AUDIO).hex()
         assert pkg["metadata"]["fish_quality"] == "MEDIUM"
 
-    def test_roundtrip(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_MEDIUM, DIARY, audio_observations=AUDIO, session_code=code)
-        out = decrypt_observation_package(pkg, fish_observations=FISH_MEDIUM, audio_observations=AUDIO, session_code=code)
-        assert out == DIARY
+    def test_roundtrip(self, keypair):
+        private_key, public_key = keypair
+        pkg = encrypt_with_observation(
+            FISH_MEDIUM, DIARY, public_key=public_key, audio_observations=AUDIO
+        )
+        assert decrypt_rsa_hybrid_package(pkg, private_key=private_key) == DIARY
 
-    def test_missing_audio_at_encrypt_raises_value_error(self):
+    def test_missing_audio_at_encrypt_raises_value_error(self, keypair):
+        _, public_key = keypair
         with pytest.raises(ValueError):
-            encrypt_with_observation(FISH_MEDIUM, DIARY, session_code=_code())
+            encrypt_with_observation(FISH_MEDIUM, DIARY, public_key=public_key)
 
-    def test_missing_session_code_at_encrypt_raises_value_error(self):
-        with pytest.raises(ValueError):
-            encrypt_with_observation(FISH_MEDIUM, DIARY, audio_observations=AUDIO)
-
-    def test_missing_fish_at_decrypt_raises_mode_mismatch(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_MEDIUM, DIARY, audio_observations=AUDIO, session_code=code)
-        with pytest.raises(ObservationModeMismatch):
-            decrypt_observation_package(pkg, audio_observations=AUDIO, session_code=code)
-
-    def test_missing_audio_at_decrypt_raises_mode_mismatch(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_MEDIUM, DIARY, audio_observations=AUDIO, session_code=code)
-        with pytest.raises(ObservationModeMismatch):
-            decrypt_observation_package(pkg, fish_observations=FISH_MEDIUM, session_code=code)
-
-    def test_tampered_fish_rejected(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_MEDIUM, DIARY, audio_observations=AUDIO, session_code=code)
-        tampered_fish = json.loads(json.dumps(FISH_MEDIUM))
-        tampered_fish["frames"][0]["activity_pct"] = 99.0
+    def test_wrong_private_key_rejected(self, keypair, other_keypair):
+        _, public_key = keypair
+        wrong_private_key, _ = other_keypair
+        pkg = encrypt_with_observation(
+            FISH_MEDIUM, DIARY, public_key=public_key, audio_observations=AUDIO
+        )
         with pytest.raises(AuthenticationFailure):
-            decrypt_observation_package(pkg, fish_observations=tampered_fish, audio_observations=AUDIO, session_code=code)
+            decrypt_rsa_hybrid_package(pkg, private_key=wrong_private_key)
 
-    def test_tampered_audio_rejected(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_MEDIUM, DIARY, audio_observations=AUDIO, session_code=code)
-        tampered_audio = copy.deepcopy(AUDIO)
-        tampered_audio["readings"][0]["value"] += 1
-        with pytest.raises(AuthenticationFailure):
-            decrypt_observation_package(pkg, fish_observations=FISH_MEDIUM, audio_observations=tampered_audio, session_code=code)
+    def test_decrypt_needs_no_fish_or_audio(self, keypair):
+        """The whole point of the RSA hybrid scheme: decrypting a
+        fish+audio-conditioned package needs ONLY the private key."""
+        private_key, public_key = keypair
+        pkg = encrypt_with_observation(
+            FISH_MEDIUM, DIARY, public_key=public_key, audio_observations=AUDIO
+        )
+        import inspect
 
-    def test_wrong_code_rejected(self):
-        pkg = encrypt_with_observation(FISH_MEDIUM, DIARY, audio_observations=AUDIO, session_code=_code())
-        with pytest.raises(AuthenticationFailure):
-            decrypt_observation_package(pkg, fish_observations=FISH_MEDIUM, audio_observations=AUDIO, session_code=_code())
+        assert "fish_observations" not in inspect.signature(decrypt_rsa_hybrid_package).parameters
+        assert "audio_observations" not in inspect.signature(decrypt_rsa_hybrid_package).parameters
+        assert decrypt_rsa_hybrid_package(pkg, private_key=private_key) == DIARY
 
 
 # --- BAD: audio only -----------------------------------------------------
 
 
 class TestBadModeAudioOnly:
-    def test_produces_v5_audio_package_without_fish_hash(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_BAD, DIARY, audio_observations=AUDIO, session_code=code)
-        assert pkg["version"] == 5
-        assert pkg["observation_mode"] == "audio"
-        assert "fish_hash" not in pkg
-        assert pkg["audio_hash"] == audio_digest_bytes(AUDIO).hex()
+    def test_produces_v4_audio_package(self, keypair):
+        _, public_key = keypair
+        pkg = encrypt_with_observation(
+            FISH_BAD, DIARY, public_key=public_key, audio_observations=AUDIO
+        )
+        assert pkg["version"] == 4
+        assert pkg["metadata"]["observation_mode"] == "audio"
+        assert pkg["metadata"]["audio_hash"] == audio_digest_bytes(AUDIO).hex()
         assert pkg["metadata"]["fish_quality"] == "BAD"
+        # fish_hash still carries the (unused-for-keying) fish digest as
+        # audit metadata - see encrypt_with_observation's docstring.
+        assert pkg["fish_hash"] == fish_digest_bytes(FISH_BAD).hex()
 
-    def test_roundtrip_without_fish(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_BAD, DIARY, audio_observations=AUDIO, session_code=code)
-        out = decrypt_observation_package(pkg, audio_observations=AUDIO, session_code=code)
-        assert out == DIARY
+    def test_roundtrip_without_fish(self, keypair):
+        private_key, public_key = keypair
+        pkg = encrypt_with_observation(
+            FISH_BAD, DIARY, public_key=public_key, audio_observations=AUDIO
+        )
+        assert decrypt_rsa_hybrid_package(pkg, private_key=private_key) == DIARY
 
-    def test_fish_is_never_a_decryption_gate_in_audio_mode(self):
-        # Supplying wrong/absent fish must not matter - audio mode never
-        # checks fish at all.
-        code = _code()
-        pkg = encrypt_with_observation(FISH_BAD, DIARY, audio_observations=AUDIO, session_code=code)
-        wrong_fish = FISH_GOOD
-        out = decrypt_observation_package(pkg, fish_observations=wrong_fish, audio_observations=AUDIO, session_code=code)
-        assert out == DIARY
+    def test_missing_audio_at_encrypt_raises_value_error(self, keypair):
+        _, public_key = keypair
+        with pytest.raises(ValueError):
+            encrypt_with_observation(FISH_BAD, DIARY, public_key=public_key)
 
-    def test_missing_audio_at_decrypt_raises_mode_mismatch(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_BAD, DIARY, audio_observations=AUDIO, session_code=code)
-        with pytest.raises(ObservationModeMismatch):
-            decrypt_observation_package(pkg, session_code=code)
-
-    def test_tampered_audio_rejected(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_BAD, DIARY, audio_observations=AUDIO, session_code=code)
+    def test_tampered_audio_rejected(self, keypair):
+        """Audio never gates decryption (only the RSA key does), but it DOES
+        condition the key - a package encrypted against one audio window
+        cannot be re-derived from a different one at encrypt time (there is
+        nothing to "tamper" post-hoc on the decrypt side since decrypt takes
+        no audio at all; this instead proves two different audio windows
+        yield different ciphertexts for the same plaintext)."""
+        _, public_key = keypair
         tampered_audio = copy.deepcopy(AUDIO)
         tampered_audio["readings"][0]["value"] += 1
+        pkg_a = encrypt_with_observation(
+            FISH_BAD, DIARY, public_key=public_key, audio_observations=AUDIO
+        )
+        pkg_b = encrypt_with_observation(
+            FISH_BAD, DIARY, public_key=public_key, audio_observations=tampered_audio
+        )
+        assert pkg_a["metadata"]["audio_hash"] != pkg_b["metadata"]["audio_hash"]
+
+
+# --- Cross-mode: every mode is a plain, interchangeable v4 package -------
+
+
+class TestEveryModeProducesAnOrdinaryV4Package:
+    def test_all_three_modes_decrypt_with_only_the_private_key(self, keypair):
+        private_key, public_key = keypair
+        pkg_good = encrypt_with_observation(FISH_GOOD, DIARY, public_key=public_key)
+        pkg_medium = encrypt_with_observation(
+            FISH_MEDIUM, DIARY, public_key=public_key, audio_observations=AUDIO
+        )
+        pkg_bad = encrypt_with_observation(
+            FISH_BAD, DIARY, public_key=public_key, audio_observations=AUDIO
+        )
+        for pkg in (pkg_good, pkg_medium, pkg_bad):
+            assert pkg["version"] == 4
+            assert decrypt_rsa_hybrid_package(pkg, private_key=private_key) == DIARY
+
+    def test_tampered_package_rejected_regardless_of_mode(self, keypair):
+        import base64
+
+        private_key, public_key = keypair
+        pkg = encrypt_with_observation(
+            FISH_MEDIUM, DIARY, public_key=public_key, audio_observations=AUDIO
+        )
+        blob = bytearray(base64.b64decode(pkg["payload_b64"]))
+        blob[len(blob) // 2] ^= 0x01
+        evil = json.loads(json.dumps(pkg))
+        evil["payload_b64"] = base64.b64encode(bytes(blob)).decode()
         with pytest.raises(AuthenticationFailure):
-            decrypt_observation_package(pkg, audio_observations=tampered_audio, session_code=code)
-
-
-# --- Cross-mode: wrong observation_mode never silently substituted -------
-
-
-class TestWrongModeNeverSilentlySwitched:
-    def test_audio_pkg_cannot_be_decrypted_as_fish_audio(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_BAD, DIARY, audio_observations=AUDIO, session_code=code)
-        # Supplying fish_observations too doesn't change what the package
-        # actually needs (its authenticated mode is "audio") - it still
-        # succeeds using ONLY audio, fish is just ignored, never required.
-        out = decrypt_observation_package(pkg, fish_observations=FISH_GOOD, audio_observations=AUDIO, session_code=code)
-        assert out == DIARY
-
-    def test_unrecognized_observation_mode_rejected(self):
-        code = _code()
-        pkg = encrypt_with_observation(FISH_MEDIUM, DIARY, audio_observations=AUDIO, session_code=code)
-        tampered = copy.deepcopy(pkg)
-        tampered["observation_mode"] = "bogus"
-        with pytest.raises(ValueError):
-            # parse_package itself rejects an unrecognized mode before
-            # decrypt_observation_package's own dispatch even runs.
-            decrypt_observation_package(tampered, fish_observations=FISH_MEDIUM, audio_observations=AUDIO, session_code=code)
-
-
-# --- Regression: existing v1-v4 fixtures still decrypt via the new entry point ---
-
-
-class TestBackwardCompatibilityThroughNewEntryPoint:
-    def test_v1_demo_package_decrypts_unchanged(self):
-        from fishrand.api import encrypt_with_fish_entropy
-
-        pkg = encrypt_with_fish_entropy(FISH_GOOD, DIARY)  # no session_code -> legacy v1 demo
-        assert pkg["version"] == 1
-        assert decrypt_observation_package(pkg, fish_observations=FISH_GOOD) == DIARY
-
-    def test_v3_fishchain_package_decrypts_unchanged(self):
-        from fishrand.api import encrypt_with_fish_entropy
-
-        code = _code()
-        pkg = encrypt_with_fish_entropy(FISH_GOOD, DIARY, session_code=code)
-        assert pkg["version"] == 3
-        assert decrypt_observation_package(pkg, fish_observations=FISH_GOOD, session_code=code) == DIARY
-
-    def test_non_v5_package_without_fish_observations_raises_mode_mismatch(self):
-        from fishrand.api import encrypt_with_fish_entropy
-
-        pkg = encrypt_with_fish_entropy(FISH_GOOD, DIARY)
-        with pytest.raises(ObservationModeMismatch):
-            decrypt_observation_package(pkg)
+            decrypt_rsa_hybrid_package(evil, private_key=private_key)

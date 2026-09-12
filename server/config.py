@@ -42,6 +42,20 @@ fish-vision repo merges:
                             (default 3 - guards against a wrong baud rate
                             or a near-disconnected ESP32).
 
+    FISHRAND_VISION_POLL_S  how often (seconds) the background poller
+                            re-checks the configured fish sources and
+                            republishes to the dashboard's live feed panel
+                            + SSE stream when the window actually changed
+                            (default 2.0). This is what makes the
+                            dashboard's "Live fish vision feed" panel
+                            update on its own instead of staying on
+                            "Waiting for a vision window" forever - see
+                            server/main.py's background poll thread.
+                            Unrelated to encryption itself, which always
+                            uses whatever _resolve_fish() resolves at that
+                            moment (the same live/cached window this
+                            poller keeps warm).
+
     Fish-quality thresholds (fishrand/quality.py classify_fish_quality) -
     NOT derived from any existing calibrated threshold (vision.py only has
     a visualization-only speed>0.5 arrow-drawing cutoff); these are
@@ -87,6 +101,10 @@ AUDIO_SERIAL_PORT = os.getenv("FISHRAND_AUDIO_PORT", "").strip() or None
 AUDIO_BAUD_RATE = int(os.getenv("FISHRAND_AUDIO_BAUD", "115200"))
 AUDIO_WINDOW_DURATION_S = float(os.getenv("FISHRAND_AUDIO_WINDOW_S", "5.0"))
 AUDIO_MIN_READINGS = max(1, int(os.getenv("FISHRAND_AUDIO_MIN_READINGS", "3")))
+
+# Background dashboard-feed poller (server/main.py) - purely cosmetic/live
+# display, never gates encryption itself.
+VISION_POLL_INTERVAL_S = max(0.5, float(os.getenv("FISHRAND_VISION_POLL_S", "2.0")))
 
 # Fish-quality classification (fishrand/quality.py). See module docstring
 # above for why these defaults are starting points, not calibrated values.

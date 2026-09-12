@@ -45,6 +45,28 @@ export function subscribeFish(onUpdate) {
   return es
 }
 
+// Latest ESP32 mic window the server has (cached from the background audio
+// poller, or a prior manual capture). null if none yet.
+export async function currentAudio() {
+  const res = await fetch(`${API_BASE}/api/audio/current`)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`current: HTTP ${res.status}`)
+  return res.json()
+}
+
+// Persistent SSE feed: pushes `audio_update` whenever the server's
+// background audio poller captures a new ESP32 Sound_Level window.
+// Returns an EventSource; events carry {source, received_at, metadata}.
+export function subscribeAudio(onUpdate) {
+  const es = new EventSource(`${API_BASE}/api/audio/events`)
+  es.addEventListener('audio_update', (msg) => {
+    try {
+      onUpdate(JSON.parse(msg.data))
+    } catch { /* ignore malformed frame */ }
+  })
+  return es
+}
+
 // Runs a request and streams `pipe` events to onPipe; resolves with the
 // `done` frame payload.
 export async function streamPipeline(path, body, onPipe) {

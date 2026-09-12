@@ -1,7 +1,0 @@
-npm notice run dashboard@0.0.0 dev
-npm notice run vite --port 5173
-
-  VITE v8.3.0  ready in 234 ms
-
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose

@@ -97,7 +97,7 @@ Deep dive: see [`documentary/how-it-was-built.md`](documentary/how-it-was-built.
 
 ### Project Demo
 # Video
-[Add your demo video link here]
+[Demo video](https://drive.google.com/drive/folders/1CP_eFMJVvKdulYwi_UwGnGOrrP7cj7pp?usp=drive_link)
 *A short walkthrough of the whole demo: camera finds the fish, the dashboard streams the pipeline while encrypting a diary entry, and the `.pkg` unlocks back on a different machine using the USB key.*
 
 # Additional Demos

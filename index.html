@@ -1,1 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeenCrypt</title>
+<meta name="description" content="A goldfish witnesses your diary. AES-256-GCM and RSA-3072 actually protect it. We took the opposite security direction.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0c0b; --bg-2:#0f110f; --panel:#121412; --tank:#060807;
+    --border:#2a2d2a; --border-soft:#1b1d1b;
+    --ink:#ecebe6; --ink-dim:#9a9a93; --ink-dimmer:#63645e;
+    --accent:#ff8c42; --accent-soft:rgba(255,140,66,.08); --on-accent:#0b0c0b;
+    --water:#5fb3b3; --ok:#7bc47f; --bad:#ff6b5e;
+    --mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --serif:'Instrument Serif', Georgia, serif;
+    --maxw: 1040px;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f3efe6; --bg-2:#ece7dc; --panel:#faf7f0; --tank:#e9e3d5;
+      --border:#d3ccbc; --border-soft:#e2dccf;
+      --ink:#1b1a17; --ink-dim:#55524a; --ink-dimmer:#8a8577;
+      --accent:#d4581a; --accent-soft:rgba(212,88,26,.07); --on-accent:#fbf8f2;
+      --water:#2c7c7d; --ok:#2f8a3a; --bad:#c23b2b;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f3efe6; --bg-2:#ece7dc; --panel:#faf7f0; --tank:#e9e3d5;
+      --border:#d3ccbc; --border-soft:#e2dccf;
+      --ink:#1b1a17; --ink-dim:#55524a; --ink-dimmer:#8a8577;
+      --accent:#d4581a; --accent-soft:rgba(212,88,26,.07); --on-accent:#fbf8f2;
+      --water:#2c7c7d; --ok:#2f8a3a; --bad:#c23b2b;
+    color-scheme: light;
+  }
 
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--mono);
+    line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  ::selection{ background:var(--accent); color:var(--on-accent); }
+  a{ color:var(--ink); text-decoration:none; border-bottom:1px solid var(--border); }
+  a:hover{ color:var(--accent); border-color:var(--accent); }
+  button{ font-family:var(--mono); }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 24px; }
+  @media (max-width:600px){ .wrap{ padding:0 16px; } }
+
+  /* ---------- nav ---------- */
+  header{
+    position:sticky; top:0; z-index:30;
+    background:color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border-soft);
+  }
+  .nav{ max-width:var(--maxw); margin:0 auto; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; font-size:12.5px; }
+  @media (max-width:600px){ .nav{ padding:12px 16px; } }
+  .brand{ font-weight:800; letter-spacing:.04em; color:var(--ink); display:flex; align-items:center; gap:10px; border:0; }
+  .brand .glyph{ color:var(--accent); font-weight:600; letter-spacing:0; }
+  .navlinks{ display:flex; gap:20px; align-items:center; color:var(--ink-dim); }
+  .navlinks a{ color:var(--ink-dim); border:0; }
+  .navlinks a:hover{ color:var(--ink); }
+  .navlinks .cta{ color:var(--on-accent); background:var(--ink); padding:7px 13px; }
+  .navlinks .cta:hover{ background:var(--accent); color:var(--on-accent); }
+  .theme-btn{ background:none; border:1px solid var(--border); color:var(--ink-dim); width:30px; height:30px; cursor:pointer; font-size:13px; }
+  .theme-btn:hover{ color:var(--accent); border-color:var(--accent); }
+  @media (max-width:720px){ .navlinks .hide-sm{ display:none; } }
+
+  /* ---------- sections ---------- */
+  main{ position:relative; z-index:1; }
+  section{ padding:96px 0; border-bottom:1px solid var(--border-soft); }
+  @media (max-width:600px){ section{ padding:64px 0; } }
+  .tag{ font-size:11px; color:var(--ink-dimmer); letter-spacing:.08em; text-transform:uppercase; margin-bottom:18px; display:flex; gap:10px; align-items:center; }
+  .tag .n{ color:var(--accent); }
+  .tag::after{ content:''; flex:1; max-width:120px; height:1px; background:var(--border); }
+  h1,h2,h3{ margin:0; font-weight:700; }
+  h2{ font-size:clamp(24px,3.6vw,34px); line-height:1.2; letter-spacing:-.015em; margin-bottom:18px; max-width:26ch; }
+  h2 em, h1 em{ font-family:var(--serif); font-style:italic; font-weight:400; color:var(--accent); letter-spacing:0; font-size:1.12em; }
+  p{ color:var(--ink-dim); font-size:14.5px; margin:0 0 14px; max-width:66ch; }
+  strong{ color:var(--ink); font-weight:600; }
+  code.i{ color:var(--ink); background:var(--panel); border:1px solid var(--border-soft); padding:1px 5px; font-size:.92em; }
+
+  .btn{ display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12.5px; font-weight:600; padding:11px 18px; border:1px solid var(--border); background:transparent; color:var(--ink); cursor:pointer; }
+  .btn:hover{ border-color:var(--accent); color:var(--accent); }
+  .btn.solid{ background:var(--ink); color:var(--on-accent); border-color:var(--ink); }
+  .btn.solid:hover{ background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn.sm{ padding:7px 12px; font-size:11.5px; }
+
+  /* reveal */
+  .sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  .js .reveal{ opacity:0; transform:translateY(16px); transition:opacity .7s ease, transform .7s ease; }
+  .js .reveal.in{ opacity:1; transform:none; }
+
+  /* ---------- hero ---------- */
+  .hero{ padding:40px 0 72px; }
+  .boot{ display:flex; flex-wrap:wrap; gap:6px 22px; font-size:11.5px; color:var(--ink-dimmer); margin-bottom:34px; }
+  .boot span b{ font-weight:500; color:var(--ink-dim); }
+  .boot span b.done{ color:var(--ok); }
+  .boot span b.zero{ color:var(--bad); }
+  .hero h1{ font-size:clamp(34px,6.4vw,68px); line-height:1.02; letter-spacing:-.035em; max-width:15ch; margin-bottom:22px; }
+  .hero .sub{ font-size:15.5px; max-width:60ch; }
+  .hero-actions{ display:flex; gap:12px; margin-top:26px; flex-wrap:wrap; }
+
+  .tankbox{ margin-top:44px; border:1px solid var(--border); background:var(--tank); position:relative; }
+  .tank-bar, .tank-read{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px 20px; padding:9px 14px; font-size:11px; color:var(--ink-dimmer); }
+  .tank-bar{ border-bottom:1px solid var(--border-soft); }
+  .tank-bar .live{ display:inline-flex; align-items:center; gap:8px; }
+  .tank-bar .live i{ width:7px; height:7px; border-radius:50%; background:var(--bad); box-shadow:0 0 8px var(--bad); animation:blink 1.6s infinite; }
+  @keyframes blink{ 50%{ opacity:.25; } }
+  .tank-bar button{ background:none; border:1px solid var(--border); color:var(--ink-dim); font-size:10.5px; padding:2px 8px; cursor:pointer; }
+  .tank-bar button[aria-pressed="true"]{ color:var(--water); border-color:var(--water); }
+  canvas#tank{ display:block; width:100%; height:340px; cursor:crosshair; touch-action:manipulation; }
+  @media (max-width:600px){ canvas#tank{ height:260px; } }
+  .tank-read{ border-top:1px solid var(--border-soft); display:grid; grid-template-columns:auto auto 1fr auto; align-items:center; }
+  .tank-read .cell{ white-space:nowrap; }
+  .tank-read .cell b{ color:var(--ink); font-weight:600; }
+  .tank-read .hash{ color:var(--water); word-break:break-all; font-size:10.5px; min-width:0; }
+  .tank-read .zero b{ color:var(--bad); }
+  @media (max-width:760px){ .tank-read{ grid-template-columns:1fr 1fr; } .tank-read .hash{ grid-column:1/-1; order:3; } }
+
+  .trio{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border-soft); border:1px solid var(--border-soft); margin-top:28px; }
+  .trio > div{ background:var(--bg); padding:22px; }
+  .trio h3{ font-size:13px; margin-bottom:8px; }
+  .trio h3::before{ content:'→ '; color:var(--accent); }
+  .trio p{ font-size:12.5px; margin:0; }
+  @media (max-width:760px){ .trio{ grid-template-columns:1fr; } }
+
+  /* ---------- demo ---------- */
+  .demo{ display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border-soft); border:1px solid var(--border); margin-top:30px; }
+  @media (max-width:860px){ .demo{ grid-template-columns:1fr; } }
+  .demo > div{ background:var(--bg); padding:22px; min-width:0; }
+  .panel-k{ font-size:10.5px; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .panel-k .keychip{ text-transform:none; letter-spacing:0; color:var(--ink-dim); }
+  .panel-k .keychip.ready{ color:var(--ok); }
+  textarea{
+    width:100%; background:var(--panel); color:var(--ink); border:1px solid var(--border);
+    font-family:var(--mono); font-size:13px; line-height:1.7; padding:14px; resize:vertical;
+  }
+  textarea:focus{ outline:none; border-color:var(--accent); }
+  #diary{ min-height:150px; font-family:var(--serif); font-size:19px; line-height:1.45; }
+  #pkg{ min-height:230px; font-size:10.5px; color:var(--ink-dim); white-space:pre; }
+  .row-btns{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+
+  .steps{ list-style:none; margin:18px 0 0; padding:0; font-size:12px; }
+  .steps li{ display:grid; grid-template-columns:18px 118px 1fr; gap:10px; padding:8px 0; border-bottom:1px dashed var(--border-soft); color:var(--ink-dimmer); transition:color .3s; }
+  .steps li .dot{ color:var(--border); }
+  .steps li .v{ word-break:break-all; font-size:11px; }
+  .steps li .v small{ display:block; color:var(--ink-dimmer); font-size:10.5px; }
+  .steps li.on{ color:var(--ink-dim); }
+  .steps li.on .dot{ color:var(--accent); }
+  .steps li.on .nm{ color:var(--ink); }
+  .steps li.real .nm::after{ content:' ★'; color:var(--accent); }
+  @media (max-width:520px){ .steps li{ grid-template-columns:18px 1fr; } .steps li .v{ grid-column:2; } }
+
+  .result{ margin-top:14px; border:1px solid var(--border-soft); background:var(--panel); padding:14px; font-size:12.5px; min-height:52px; color:var(--ink-dimmer); white-space:pre-wrap; word-break:break-word; }
+  .result.ok{ border-color:var(--ok); color:var(--ink); }
+  .result.ok .plain{ font-family:var(--serif); font-size:18px; display:block; margin-top:6px; }
+  .result.err{ border-color:var(--bad); color:var(--bad); }
+  .result.fish{ border-color:var(--water); color:var(--water); }
+
+  .b64{ margin-top:26px; font-size:11px; color:var(--ink-dimmer); word-break:break-all; line-height:1.9; border:1px dashed var(--border); padding:14px 16px; cursor:pointer; background:none; width:100%; text-align:left; font-family:var(--mono); }
+  .b64:hover{ border-color:var(--accent); }
+  .b64 .k{ color:var(--ink-dim); display:block; margin-bottom:8px; font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
+  .b64 pre{ margin:0; white-space:pre-wrap; color:var(--ink); font-family:var(--mono); font-size:12px; }
+
+  /* ---------- pipeline ---------- */
+  .pipe{ margin-top:30px; border:1px solid var(--border); background:var(--bg-2); padding:18px; overflow-x:auto; }
+  .pipe svg{ display:block; min-width:680px; width:100%; height:auto; }
+  .pipe .node rect{ fill:var(--bg); stroke:var(--border); }
+  .pipe .node.hot rect{ stroke:var(--accent); fill:var(--accent-soft); }
+  .pipe .node.water rect{ stroke:var(--water); }
+  .pipe .node.dash rect{ stroke-dasharray:4 4; }
+  .pipe text{ font-family:var(--mono); }
+  .pipe .t1{ fill:var(--ink); font-size:12.5px; font-weight:700; }
+  .pipe .t2{ fill:var(--ink-dimmer); font-size:10px; }
+  .pipe .lbl{ fill:var(--ink-dim); font-size:10px; }
+  .pipe .lbl.hot{ fill:var(--accent); font-weight:600; }
+  .pipe .wire{ fill:none; stroke:var(--border); stroke-width:1.2; }
+  .pipe .wire.hot{ stroke:var(--accent); }
+  .pipe .wire.water{ stroke:var(--water); }
+  .pipe .wire.dash{ stroke-dasharray:3 4; }
+  .pipe .pk{ fill:var(--accent); }
+  .pipe .pk.water{ fill:var(--water); }
+  .legend{ display:flex; gap:22px; flex-wrap:wrap; font-size:11px; color:var(--ink-dimmer); margin-top:14px; }
+  .legend i{ display:inline-block; width:18px; height:2px; vertical-align:middle; margin-right:8px; }
+
+  .quality{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border-soft); border:1px solid var(--border-soft); margin-top:22px; }
+  .quality > div{ background:var(--bg); padding:18px 20px; font-size:12px; color:var(--ink-dimmer); }
+  .quality b{ display:block; font-size:13px; margin-bottom:4px; }
+  .quality .g b{ color:var(--ok); } .quality .m b{ color:var(--accent); } .quality .x b{ color:var(--bad); }
+  @media (max-width:700px){ .quality{ grid-template-columns:1fr; } }
+
+  /* ---------- lineage ---------- */
+  .evo{ display:grid; grid-template-columns:repeat(6,1fr); margin-top:34px; position:relative; }
+  .evo::before{ content:''; position:absolute; left:0; right:0; top:9px; height:1px; background:linear-gradient(90deg, transparent, var(--border) 8%, var(--border) 92%, transparent); }
+  .evo .st{ position:relative; padding:30px 14px 0 0; }
+  .evo .st::before{ content:''; position:absolute; top:5px; left:0; width:9px; height:9px; border:1px solid var(--ink-dimmer); background:var(--bg); transform:rotate(45deg); }
+  .evo .st .y{ font-size:10px; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:.06em; }
+  .evo .st .nm{ font-size:14px; font-weight:700; margin:4px 0 6px; }
+  .evo .st .d{ font-size:11.5px; color:var(--ink-dimmer); line-height:1.55; }
+  .evo .st .ex{ margin-top:10px; display:flex; flex-wrap:wrap; gap:4px; }
+  .evo .st .ex span{ font-size:10px; border:1px solid var(--border-soft); padding:1px 6px; color:var(--ink-dimmer); }
+  .evo .st.me{ background:var(--accent-soft); border:1px solid var(--accent); padding:30px 14px 16px; margin-top:-12px; }
+  .evo .st.me::before{ background:var(--accent); border-color:var(--accent); left:14px; top:17px; }
+  .evo .st.me .nm{ color:var(--accent); font-size:15px; letter-spacing:.03em; }
+  .evo .st.me .d{ color:var(--ink-dim); }
+  .evo .st:not(.me):hover .nm{ color:var(--accent); }
+  @media (max-width:860px){
+    .evo{ grid-template-columns:1fr; }
+    .evo::before{ left:4px; right:auto; top:0; bottom:0; width:1px; height:auto; background:var(--border); }
+    .evo .st{ padding:0 0 22px 28px; }
+    .evo .st::before{ top:6px; left:0; }
+    .evo .st.me{ margin:0 0 22px; padding:16px 16px 16px 28px; }
+    .evo .st.me::before{ left:0; top:22px; }
+  }
+
+  /* ---------- honest ---------- */
+  .compare{ display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border-soft); border:1px solid var(--border-soft); margin-top:24px; }
+  .compare > div{ background:var(--bg); padding:26px; }
+  .compare .who{ font-size:12px; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:.06em; margin-bottom:14px; }
+  .compare .who.me{ color:var(--accent); }
+  .compare .metric{ display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px; color:var(--ink-dimmer); }
+  .compare .metric span:last-child{ color:var(--ink); text-align:right; }
+  @media (max-width:700px){ .compare{ grid-template-columns:1fr; } }
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border-soft); border:1px solid var(--border-soft); margin-top:24px; }
+  .stats > div{ background:var(--bg); padding:30px 24px; }
+  .stats .num{ font-size:clamp(30px,4.4vw,44px); font-weight:800; letter-spacing:-.03em; line-height:1; }
+  .stats .num.accent{ color:var(--accent); }
+  .stats .cap{ font-size:12px; color:var(--ink-dimmer); margin-top:10px; }
+  @media (max-width:700px){ .stats{ grid-template-columns:1fr; } }
+
+  /* ---------- quadrant ---------- */
+  .chart-wrap{ margin-top:24px; border:1px solid var(--border); padding:22px; position:relative; overflow-x:auto; }
+  .chart-wrap svg{ display:block; width:100%; max-width:680px; min-width:480px; height:auto; }
+  .chart-wrap text{ font-family:var(--mono); }
+  .q-axis{ stroke:var(--border); } .q-grid{ stroke:var(--border-soft); stroke-dasharray:3 4; }
+  .q-lab{ fill:var(--ink-dimmer); font-size:10px; }
+  .q-zone{ fill:var(--ink-dimmer); font-size:9.5px; opacity:.7; }
+  .pt circle{ fill:var(--ink-dimmer); transition:r .2s; }
+  .pt text{ fill:var(--ink-dim); font-size:11px; }
+  .pt{ cursor:default; }
+  .pt:hover circle{ r:7; fill:var(--ink); }
+  .pt.me circle{ fill:var(--accent); }
+  .pt.me text{ fill:var(--accent); font-weight:700; font-size:12px; }
+  .pt.me .ring{ fill:none; stroke:var(--accent); transform-box:fill-box; transform-origin:center; animation:ring 2.4s ease-out infinite; }
+  @keyframes ring{ from{ transform:scale(1); opacity:.8; } to{ transform:scale(4); opacity:0; } }
+  .tip{ position:absolute; pointer-events:none; background:var(--panel); border:1px solid var(--border); padding:8px 10px; font-size:11px; color:var(--ink-dim); max-width:220px; opacity:0; transition:opacity .15s; z-index:2; }
+  .tip.on{ opacity:1; }
+
+  /* ---------- git log ---------- */
+  .log{ margin-top:28px; font-size:12.5px; }
+  .commit{ display:grid; grid-template-columns:26px 1fr; }
+  .commit .g{ color:var(--accent); position:relative; }
+  .commit .g::after{ content:''; position:absolute; left:4px; top:22px; bottom:0; width:1px; background:var(--border); }
+  .commit:last-child .g::after{ display:none; }
+  .commit .body{ padding-bottom:26px; }
+  .commit .h{ display:flex; gap:10px; flex-wrap:wrap; align-items:baseline; }
+  .commit .sha{ color:var(--accent); }
+  .commit .ref{ color:var(--water); font-size:11px; }
+  .commit .ref.head{ color:var(--ok); }
+  .commit .msg{ color:var(--ink); font-weight:600; }
+  .commit p{ font-size:12.5px; color:var(--ink-dimmer); margin:6px 0 0; }
+
+  /* ---------- fish diary ---------- */
+  .fdiary{ margin-top:28px; border:1px solid var(--border); background:var(--bg-2); }
+  .fd-bar{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 16px; border-bottom:1px solid var(--border-soft); font-size:11px; color:var(--ink-dimmer); }
+  .fd-bar b{ color:var(--accent); font-weight:600; }
+  .fentry{ display:grid; grid-template-columns:64px 1fr auto; gap:6px 18px; align-items:start; padding:16px; border-bottom:1px dashed var(--border-soft); }
+  .fentry:last-child{ border-bottom:0; }
+  .fentry .tm{ font-size:12px; color:var(--accent); padding-top:2px; }
+  .fentry .tm small{ display:block; color:var(--ink-dimmer); font-size:10px; }
+  .fentry .ct{ font-size:11px; color:var(--ink-dimmer); word-break:break-all; line-height:1.7; min-width:0; }
+  .fentry.open .ct{ font-family:var(--serif); font-size:18px; line-height:1.45; color:var(--ink); word-break:normal; }
+  .fentry .ct .cur{ display:inline-block; width:7px; height:15px; background:var(--accent); vertical-align:-2px; margin-left:1px; }
+  .fentry .meta{ grid-column:2; font-size:10.5px; color:var(--ink-dimmer); display:none; }
+  .fentry.open .meta{ display:block; }
+  .fentry .meta b{ color:var(--bad); font-weight:500; }
+  .fentry button{ white-space:nowrap; }
+  .fentry:not(.open) .ct{ display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  @media (max-width:600px){ .fentry{ grid-template-columns:1fr auto; } .fentry .tm{ grid-column:1; grid-row:1; } .fentry .ct, .fentry .meta{ grid-column:1/-1; } .fentry button{ grid-row:1; grid-column:2; } }
+
+  /* ---------- terminal ---------- */
+  .term{ border:1px solid var(--border); background:var(--tank); margin-top:26px; }
+  .term-bar{ padding:9px 14px; border-bottom:1px solid var(--border-soft); font-size:11px; color:var(--ink-dimmer); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .term-bar .dots{ display:flex; gap:6px; }
+  .term-bar .dots i{ width:9px; height:9px; border-radius:50%; background:var(--border); }
+  .term pre{ margin:0; padding:18px 20px; overflow-x:auto; font-size:12.5px; line-height:1.85; color:var(--ink); min-height:330px; }
+  .term .c{ color:var(--ink-dimmer); }
+  .term .k{ color:var(--accent); }
+  .caret{ display:inline-block; width:8px; height:15px; background:var(--accent); vertical-align:-2px; animation:blink 1s steps(1) infinite; }
+
+  /* ---------- cards / team / faq ---------- */
+  .cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border-soft); border:1px solid var(--border-soft); margin-top:24px; }
+  .cards a{ background:var(--bg); padding:22px; border:0; display:block; color:var(--ink); transition:background .2s; }
+  .cards a:hover{ background:var(--panel); }
+  .cards a:hover .t{ color:var(--accent); }
+  .cards .k{ font-size:10px; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; display:block; }
+  .cards .t{ font-size:14px; margin-bottom:8px; font-weight:600; }
+  .cards .d{ font-size:12.5px; color:var(--ink-dimmer); }
+  @media (max-width:780px){ .cards{ grid-template-columns:1fr; } }
+  .team{ display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border-soft); border:1px solid var(--border-soft); margin-top:20px; }
+  .person{ background:var(--bg); padding:22px; }
+  .person .name{ font-weight:700; font-size:14px; }
+  .person .handle{ color:var(--accent); font-size:12px; margin-top:2px; border:0; display:inline-block; }
+  .person .role{ color:var(--ink-dim); font-size:12.5px; margin-top:10px; }
+  @media (max-width:700px){ .team{ grid-template-columns:1fr; } }
+  .faq-item{ border-bottom:1px solid var(--border-soft); }
+  .faq-item summary{ cursor:pointer; padding:18px 0; font-size:14px; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+  .faq-item summary::-webkit-details-marker{ display:none; }
+  .faq-item summary::after{ content:'+'; color:var(--ink-dimmer); font-size:17px; flex-shrink:0; }
+  .faq-item[open] summary::after{ content:'–'; color:var(--accent); }
+  .faq-item summary:hover{ color:var(--accent); }
+  .faq-item p{ padding-bottom:18px; margin:0; font-size:13px; }
+
+  /* ---------- footer ---------- */
+  footer{ padding:50px 0 64px; position:relative; overflow:hidden; }
+  .foot-row{ display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:22px; }
+  .foot-links{ display:flex; gap:18px; font-size:12px; flex-wrap:wrap; }
+  .foot-links a{ color:var(--ink-dimmer); border:0; }
+  .foot-links a:hover{ color:var(--accent); }
+  .foot-b64{ margin-top:18px; font-size:11px; color:var(--ink-dimmer); word-break:break-all; max-width:60ch; }
+  .foot-b64 .dec{ color:var(--accent); display:none; }
+  .foot-b64{ cursor:pointer; }
+  .foot-b64.show .enc{ display:none; }
+  .foot-b64.show .dec{ display:inline; }
+  @media (hover:hover){ .foot-b64:hover .enc{ display:none; } .foot-b64:hover .dec{ display:inline; } }
+  .foot-fish{ position:absolute; bottom:18px; left:-120px; color:var(--accent); font-size:14px; white-space:nowrap; pointer-events:none; }
+  @media (hover:hover){ footer:hover .foot-fish{ animation:swim 7s linear infinite; } }
+  footer.swim .foot-fish{ animation:swim 5s linear 1; }
+  @keyframes swim{ from{ transform:translateX(0); } to{ transform:translateX(calc(100vw + 240px)); } }
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{ animation:none !important; transition:none !important; }
+    html{ scroll-behavior:auto; }
+    .js .reveal{ opacity:1; transform:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="nav" aria-label="primary">
+    <a class="brand" href="#top"><span class="glyph">&gt;&lt;(((°&gt;</span> MEENCRYPT</a>
+    <div class="navlinks">
+      <a class="hide-sm" href="#demo">Try it</a>
+      <a class="hide-sm" href="#pipeline">Pipeline</a>
+      <a class="hide-sm" href="#honest">Honesty</a>
+      <a class="hide-sm" href="#quickstart">Quickstart</a>
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="toggle color theme" title="toggle theme">◐</button>
+      <a class="cta" href="https://github.com/abijit2626/MeenCrypt" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="boot" id="boot" aria-hidden="true"></div>
+
+      <div class="tag"><span class="n">00</span> meencrypt / fishrand v4</div>
+      <h1>We took the <em>opposite</em> security direction.</h1>
+      <p class="sub">Password managers assist you. They don't bond with you. MeenCrypt encrypts your diary with a goldfish as witness. The fish adds nothing to the math, and we say so up front. The math is AES-256-GCM, and an RSA-3072 key wraps it.</p>
+
+      <div class="hero-actions">
+        <a class="btn solid" href="#demo">Encrypt something ↓</a>
+        <a class="btn" href="https://github.com/abijit2626/MeenCrypt" target="_blank" rel="noopener">View source ↗</a>
+      </div>
+
+      <div class="tankbox">
+        <div class="tank-bar">
+          <span class="live"><i></i> tank.local · /dev/video2 · <span id="clockOut">—</span></span>
+          <span><button type="button" id="cvBtn" aria-pressed="true">cv overlay</button></span>
+        </div>
+        <canvas id="tank" aria-label="An animated ASCII fish tank. The fish follow your cursor; click to drop food."></canvas>
+        <div class="tank-read">
+          <span class="cell">frame <b id="rFrame">0</b></span>
+          <span class="cell">quality <b id="rQual">—</b></span>
+          <span class="hash" title="SHA-256 of the canonical fish frame">sha256 <span id="rHash">computing…</span></span>
+          <span class="cell zero">entropy from fish <b>0 bits</b></span>
+        </div>
+      </div>
+
+      <div class="trio">
+        <div><h3>not a vault</h3><p>Vaults store things. MeenCrypt watches, then encrypts. The fish is part of the ritual. It is not part of the defense.</p></div>
+        <div><h3>honest by design</h3><p>What does the fish actually do? This page answers that before you have to ask. The hash above is real, and so is the zero next to it.</p></div>
+        <div><h3>more diary than tool</h3><p>It's built to be opened once a day, not wired into a workflow. It has one job.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DEMO ============ -->
+  <section id="demo">
+    <div class="wrap">
+      <div class="tag reveal"><span class="n">01</span> try it · runs in your browser</div>
+      <h2 class="reveal">Write something. <em>The fish will watch.</em></h2>
+      <p class="reveal">This is the package v4 pipeline, rebuilt with WebCrypto. It freezes the tank's current frame, hashes it, and mixes that hash with 32 bytes from your OS's CSPRNG using HKDF. The result seals your entry with AES-256-GCM. An RSA-3072 key wraps the session key, then the session key is thrown away.</p>
+
+      <div class="demo reveal">
+        <div>
+          <div class="panel-k"><span>diary.txt</span><span class="keychip" id="keyChip">USB: not inserted</span></div>
+          <label for="diary" class="sr">diary entry</label>
+          <textarea id="diary" spellcheck="false">dear diary, today the fish looked at me for eleven seconds. i think we're close now.</textarea>
+          <div class="row-btns">
+            <button class="btn solid" id="encBtn" type="button">Encrypt with fish witness</button>
+          </div>
+          <ol class="steps" id="steps">
+            <li data-s="observe"><span class="dot">●</span><span class="nm">observe</span><span class="v">freeze a frame from the tank</span></li>
+            <li data-s="condition"><span class="dot">●</span><span class="nm">condition</span><span class="v">SHA-256(frame) → fish_hash</span></li>
+            <li data-s="secret" class="real"><span class="dot">●</span><span class="nm">secret</span><span class="v">32 bytes from the OS CSPRNG</span></li>
+            <li data-s="derive"><span class="dot">●</span><span class="nm">derive</span><span class="v">HKDF-SHA256(secret ‖ fish_hash)</span></li>
+            <li data-s="seal" class="real"><span class="dot">●</span><span class="nm">seal</span><span class="v">AES-256-GCM, 12-byte nonce</span></li>
+            <li data-s="wrap" class="real"><span class="dot">●</span><span class="nm">wrap</span><span class="v">RSA-OAEP-3072(session key)</span></li>
+          </ol>
+        </div>
+        <div>
+          <div class="panel-k"><span>diary.pkg · editable</span><span>version 4</span></div>
+          <label for="pkg" class="sr">encrypted package</label>
+          <textarea id="pkg" spellcheck="false" placeholder="// encrypt something and the package lands here.&#10;// then change a byte and see what happens."></textarea>
+          <div class="row-btns">
+            <button class="btn solid sm" id="decBtn" type="button" disabled>Decrypt with USB key</button>
+            <button class="btn sm" id="tamperBtn" type="button" disabled>Flip one byte</button>
+            <button class="btn sm" id="fishBtn" type="button" disabled>Ask the fish to decrypt</button>
+            <button class="btn sm" id="dlBtn" type="button" disabled>Download .pkg</button>
+          </div>
+          <div class="result" id="result" aria-live="polite">// awaiting package</div>
+        </div>
+      </div>
+      <p class="reveal" style="font-size:12px;margin-top:14px;color:var(--ink-dimmer)">★ = the parts that actually protect you. In this demo the "USB" keypair lives in this tab's memory and dies when you refresh. In the real CLI, <code class="i">cli.py keygen</code> writes the private key to your USB stick.</p>
+
+      <button class="b64 reveal" id="b64" type="button" aria-label="toggle base64 decode">
+        <span class="k">[b.64] fishrand/mixing.py · the key derivation, click to decode</span>
+        <span id="b64enc"></span><pre id="b64dec" hidden></pre>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ PIPELINE ============ -->
+  <section id="pipeline">
+    <div class="wrap">
+      <div class="tag reveal"><span class="n">02</span> how the bytes move</div>
+      <h2 class="reveal">Two lanes. <em>Only one of them is secret.</em></h2>
+      <p class="reveal">The upper lane is the ritual: a webcam, OpenCV, an optional ESP32 microphone, and a collector that turns a few seconds of tank into canonical bytes. The lower lane is the defense. The fish's hash does condition the key, but the secret comes from <code class="i">os.urandom</code>.</p>
+
+      <div class="pipe reveal">
+        <svg id="pipeSvg" viewBox="0 0 820 570" role="img" aria-label="Pipeline: vision.py and ESP32 mic feed the collector, then the quality gate, then SHA-256. The digest and 32 CSPRNG bytes go into HKDF-SHA256, which yields the AES-256-GCM session key. RSA-OAEP wraps the session key. Both go into diary.pkg, which only the private key on USB can open.">
+          <defs>
+            <path id="w1" d="M170,67 H200 V100 H230"/>
+            <path id="w2" d="M170,157 H200 V124 H230"/>
+            <path id="w3" d="M380,112 H440"/>
+            <path id="w4" d="M590,112 H650"/>
+            <path id="w5" d="M725,139 V200 H515 V260"/>
+            <path id="w6" d="M170,287 H440"/>
+            <path id="w7" d="M590,287 H650"/>
+            <path id="w8" d="M515,314 V380"/>
+            <path id="w9" d="M725,314 V380"/>
+            <path id="w10" d="M590,407 H650"/>
+          </defs>
+
+          <use href="#w1" class="wire water"/><use href="#w2" class="wire water dash"/>
+          <use href="#w3" class="wire water"/><use href="#w4" class="wire water"/>
+          <use href="#w5" class="wire water"/>
+          <use href="#w6" class="wire hot"/><use href="#w7" class="wire hot"/>
+          <use href="#w8" class="wire hot"/><use href="#w9" class="wire hot"/><use href="#w10" class="wire hot"/>
+          <path d="M725,500 V434" class="wire hot dash"/>
+
+          <text x="305" y="278" class="lbl hot" text-anchor="middle">32 bytes · does the real work</text>
+          <text x="620" y="193" class="lbl" text-anchor="middle">fish_hash · public, audit only</text>
+          <text x="735" y="252" class="lbl">+ diary.txt</text>
+          <text x="735" y="472" class="lbl hot">only way in</text>
+          <text x="20" y="235" class="lbl" style="letter-spacing:.08em">── DEFENSE ─────────────────────────</text>
+          <text x="20" y="24" class="lbl" style="letter-spacing:.08em">── RITUAL ──────────────────────────</text>
+
+          <g class="node water"><rect x="20" y="40" width="150" height="54"/><text x="32" y="62" class="t1">vision.py</text><text x="32" y="80" class="t2">webcam + OpenCV</text></g>
+          <g class="node water dash"><rect x="20" y="130" width="150" height="54"/><text x="32" y="152" class="t1">ESP32 mic</text><text x="32" y="170" class="t2">serial · optional</text></g>
+          <g class="node"><rect x="230" y="85" width="150" height="54"/><text x="242" y="107" class="t1">collector</text><text x="242" y="125" class="t2">window + canonicalize</text></g>
+          <g class="node"><rect x="440" y="85" width="150" height="54"/><text x="452" y="107" class="t1">quality gate</text><text x="452" y="125" class="t2">good · medium · bad</text></g>
+          <g class="node"><rect x="650" y="85" width="150" height="54"/><text x="662" y="107" class="t1">SHA-256</text><text x="662" y="125" class="t2">conditioning, 0 bits</text></g>
+
+          <g class="node hot"><rect x="20" y="260" width="150" height="54"/><text x="32" y="282" class="t1">OS CSPRNG</text><text x="32" y="300" class="t2">secrets.token_bytes</text></g>
+          <g class="node hot"><rect x="440" y="260" width="150" height="54"/><text x="452" y="282" class="t1">HKDF-SHA256</text><text x="452" y="300" class="t2">info: …-v4-rsa-hybrid</text></g>
+          <g class="node hot"><rect x="650" y="260" width="150" height="54"/><text x="662" y="282" class="t1">AES-256-GCM</text><text x="662" y="300" class="t2">nonce 12B · tag 16B</text></g>
+          <g class="node hot"><rect x="440" y="380" width="150" height="54"/><text x="452" y="402" class="t1">RSA-OAEP wrap</text><text x="452" y="420" class="t2">3072-bit public key</text></g>
+          <g class="node"><rect x="650" y="380" width="150" height="54"/><text x="662" y="402" class="t1">diary.pkg</text><text x="662" y="420" class="t2">no secret inside</text></g>
+          <g class="node hot dash"><rect x="650" y="500" width="150" height="54"/><text x="662" y="522" class="t1">USB drive</text><text x="662" y="540" class="t2">key + hw serial</text></g>
+
+          <g id="packets">
+            <circle r="3" class="pk water"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#w1"/></animateMotion></circle>
+            <circle r="3" class="pk water"><animateMotion dur="1.6s" begin=".7s" repeatCount="indefinite"><mpath href="#w2"/></animateMotion></circle>
+            <circle r="3" class="pk water"><animateMotion dur="1s" repeatCount="indefinite"><mpath href="#w3"/></animateMotion></circle>
+            <circle r="3" class="pk water"><animateMotion dur="1s" begin=".4s" repeatCount="indefinite"><mpath href="#w4"/></animateMotion></circle>
+            <circle r="3" class="pk water"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#w5"/></animateMotion></circle>
+            <circle r="3.5" class="pk"><animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#w6"/></animateMotion></circle>
+            <circle r="3.5" class="pk"><animateMotion dur="1.8s" begin=".9s" repeatCount="indefinite"><mpath href="#w6"/></animateMotion></circle>
+            <circle r="3.5" class="pk"><animateMotion dur=".9s" repeatCount="indefinite"><mpath href="#w7"/></animateMotion></circle>
+            <circle r="3.5" class="pk"><animateMotion dur="1s" begin=".3s" repeatCount="indefinite"><mpath href="#w8"/></animateMotion></circle>
+            <circle r="3.5" class="pk"><animateMotion dur="1s" begin=".6s" repeatCount="indefinite"><mpath href="#w9"/></animateMotion></circle>
+            <circle r="3.5" class="pk"><animateMotion dur=".9s" begin=".2s" repeatCount="indefinite"><mpath href="#w10"/></animateMotion></circle>
+          </g>
+        </svg>
+        <div class="legend">
+          <span><i style="background:var(--water)"></i>public observation</span>
+          <span><i style="background:var(--accent)"></i>secret material</span>
+          <span><i style="background:repeating-linear-gradient(90deg,var(--ink-dimmer) 0 3px,transparent 3px 6px)"></i>optional / offline</span>
+        </div>
+      </div>
+
+      <div class="quality reveal">
+        <div class="g"><b>GOOD fish</b>The fish are moving enough. SHA-256 of the fish window conditions the key.</div>
+        <div class="m"><b>MEDIUM fish</b>The fish are lazy. The fish digest and the audio digest are hashed together.</div>
+        <div class="x"><b>BAD fish</b>Tracking lost the fish. The ESP32 microphone takes over. Either way, the CSPRNG was always doing the work.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LINEAGE ============ -->
+  <section id="lineage">
+    <div class="wrap">
+      <div class="tag reveal"><span class="n">03</span> a short history of securing a diary</div>
+      <h2 class="reveal">Everything before MeenCrypt, <em>and why it wasn't enough.</em></h2>
+      <div class="evo reveal">
+        <div class="st"><div class="y">era 0</div><div class="nm">paper</div><div class="d">No encryption and no bonding. Just hope.</div><div class="ex"><span>notebook</span><span>mattress</span><span>lost lockbox key</span></div></div>
+        <div class="st"><div class="y">era 1</div><div class="nm">note apps</div><div class="d">Convenient and searchable. Not encrypted by default.</div><div class="ex"><span>notes</span><span>docs</span><span>evernote</span></div></div>
+        <div class="st"><div class="y">era 2</div><div class="nm">vaults</div><div class="d">Real encryption, zero personality. They assist you, but they don't bond with you.</div><div class="ex"><span>bitwarden</span><span>1password</span><span>keepass</span></div></div>
+        <div class="st me"><div class="y">now</div><div class="nm">MEENCRYPT</div><div class="d">Witnessed by a fish, sealed with AES-256-GCM, wrapped with RSA-3072. It bonds and it defends, and we keep the two honestly separate.</div></div>
+        <div class="st"><div class="y">sideways</div><div class="nm">crypto tools</div><div class="d">Correct and minimal. No ritual, no fish.</div><div class="ex"><span>gpg</span><span>age</span><span>openssl</span></div></div>
+        <div class="st"><div class="y">sideways</div><div class="nm">pets</div><div class="d">Plenty of bonding. Absolutely no encryption.</div><div class="ex"><span>dog</span><span>cat</span><span>goldfish, unencrypted</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HONEST ============ -->
+  <section id="honest">
+    <div class="wrap">
+      <div class="tag reveal"><span class="n">04</span> the honest part</div>
+      <h2 class="reveal">What's real, <em>priced against what isn't.</em></h2>
+      <p class="reveal">The fish is not a security feature. Here is what actually stands between your diary and everyone else, priced the way we would price it if we were selling you something.</p>
+
+      <div class="compare reveal">
+        <div>
+          <div class="who me">MeenCrypt</div>
+          <div class="metric"><span>marginal cost / entry</span><span>$0.00</span></div>
+          <div class="metric"><span>time to encrypt</span><span>&lt; 1s</span></div>
+          <div class="metric"><span>entropy source</span><span>OS CSPRNG</span></div>
+          <div class="metric"><span>listens to you</span><span>one fish, silently</span></div>
+          <div class="metric"><span>recovery if key lost</span><span>none, by design</span></div>
+        </div>
+        <div>
+          <div class="who">a therapist</div>
+          <div class="metric"><span>marginal cost / session</span><span>~$150</span></div>
+          <div class="metric"><span>time to process a day</span><span>~45 min</span></div>
+          <div class="metric"><span>entropy source</span><span>n/a</span></div>
+          <div class="metric"><span>listens to you</span><span>professionally</span></div>
+          <div class="metric"><span>recovery if you forget</span><span>they take notes</span></div>
+        </div>
+      </div>
+
+      <div class="stats reveal">
+        <div><div class="num accent"><span data-count="0">0</span>%</div><div class="cap">of your key's entropy comes from the fish</div></div>
+        <div><div class="num"><span data-count="3072">0</span>-bit</div><div class="cap">RSA keypair. The private half lives only on your USB drive.</div></div>
+        <div><div class="num"><span data-count="236">0</span></div><div class="cap">test functions, because the crypto core can only be funny if it is also correct</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUADRANT ============ -->
+  <section id="quadrant">
+    <div class="wrap">
+      <div class="tag reveal"><span class="n">05</span> security vs. bonding</div>
+      <h2 class="reveal">Where everything else sits, <em>plotted honestly.</em></h2>
+      <p class="reveal">Most tools pick one axis. MeenCrypt is the only point that tries to hold both. That is either the whole idea or the whole joke, depending on how seriously you take a fish.</p>
+      <div class="chart-wrap reveal" id="chartWrap">
+        <svg viewBox="0 0 640 400" role="img" aria-label="Scatter plot of security against emotional bonding. MeenCrypt sits alone in the high-security, high-bonding corner.">
+          <line class="q-axis" x1="60" y1="20" x2="60" y2="350"/>
+          <line class="q-axis" x1="60" y1="350" x2="610" y2="350"/>
+          <line class="q-grid" x1="60" y1="185" x2="610" y2="185"/>
+          <line class="q-grid" x1="335" y1="20" x2="335" y2="350"/>
+          <text class="q-lab" x="30" y="190" transform="rotate(-90 30 190)" text-anchor="middle">security →</text>
+          <text class="q-lab" x="335" y="380" text-anchor="middle">emotional bonding →</text>
+          <text class="q-zone" x="70" y="342">cold &amp; exposed</text>
+          <text class="q-zone" x="600" y="342" text-anchor="end">warm &amp; exposed</text>
+          <text class="q-zone" x="70" y="34">cold &amp; safe</text>
+
+          <g class="pt" data-tip="paper diary: readable by anyone who finds the mattress."><circle cx="160" cy="300" r="4"/><text x="170" y="304">paper diary</text></g>
+          <g class="pt" data-tip="pet goldfish: maximum bonding, zero ciphertext."><circle cx="480" cy="325" r="4"/><text x="490" y="329">pet goldfish</text></g>
+          <g class="pt" data-tip="note apps: synced, searchable, usually plaintext at rest."><circle cx="235" cy="250" r="4"/><text x="245" y="254">note apps</text></g>
+          <g class="pt" data-tip="password managers: excellent crypto, never once asked about your day."><circle cx="170" cy="78" r="4"/><text x="180" y="82">password managers</text></g>
+          <g class="pt" data-tip="gpg / age: correct, minimal, emotionally unavailable."><circle cx="115" cy="58" r="4"/><text x="125" y="46">gpg / age</text></g>
+          <g class="pt me" data-tip="meencrypt: AES-256-GCM + RSA-3072, witnessed by a fish."><circle class="ring" cx="495" cy="62" r="6"/><circle cx="495" cy="62" r="6"/><text x="507" y="66">meencrypt</text></g>
+        </svg>
+        <div class="tip" id="tip"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GIT LOG ============ -->
+  <section id="history">
+    <div class="wrap">
+      <div class="tag reveal"><span class="n">06</span> git log --graph --oneline</div>
+      <h2 class="reveal">Five versions of <em>taking a joke seriously.</em></h2>
+      <div class="log reveal">
+        <div class="commit"><div class="g">*</div><div class="body">
+          <div class="h"><span class="sha">8c2e213</span><span class="ref head">(HEAD → main, v5)</span><span class="msg">polish the tank</span></div>
+          <p>Diary entries are now bound to a physical drive by its hardware serial, so a copied key file isn't enough when you decrypt through the app. The ESP32 mic streams over USB serial. The dashboard got live fish-activity and ops-rate charts, quality-tier bars, and a tamper test, and the diary app was reworked. The crypto didn't change, and that's on purpose.</p>
+        </div></div>
+        <div class="commit"><div class="g">*</div><div class="body">
+          <div class="h"><span class="sha">c8d7df7</span><span class="ref">(v4)</span><span class="msg">RSA-OAEP hybrid encryption</span></div>
+          <p>An RSA-3072 public key now wraps the ephemeral AES-256 session key. The private key lives on a USB stick, and nothing else is needed to decrypt. The fish became audit metadata. When the fish are too still, the ESP32 mic fills in.</p>
+        </div></div>
+        <div class="commit"><div class="g">*</div><div class="body">
+          <div class="h"><span class="ref">(v3)</span><span class="msg">the fish-chain</span></div>
+          <p>Each frame ate one HMAC-SHA256 step of the key schedule, and a public commitment rejected the wrong fish. This is where we worked out exactly why fish data can never be a secret.</p>
+        </div></div>
+        <div class="commit"><div class="g">*</div><div class="body">
+          <div class="h"><span class="ref">(v2)</span><span class="msg">make it real</span></div>
+          <p>This added a real vision contract, a collector that watches the NDJSON inbox, and one universal USB code that unlocks everything. The two websites arrived too: a dashboard on :5173 and a diary on :5174.</p>
+        </div></div>
+        <div class="commit"><div class="g">*</div><div class="body">
+          <div class="h"><span class="ref">(v1)</span><span class="msg">the joke</span></div>
+          <p>SHA-256 of the fish, then HKDF, then AES-GCM. Each package embedded its own random key material, so anyone with the file could decrypt it. It made a perfect demo and a terrible secret.</p>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FISH DIARY ============ -->
+  <section id="fishdiary">
+    <div class="wrap">
+      <div class="tag reveal"><span class="n">07</span> intercepted · fish#0/diary.pkg</div>
+      <h2 class="reveal">Dear diary, <em>it's me, the fish.</em></h2>
+      <p class="reveal">We found this on the USB stick the morning after the hackathon. Someone had been using MeenCrypt, and it wasn't us. Every entry below was just encrypted with AES-256-GCM in your browser. Click one to read what the fish was going through.</p>
+      <div class="fdiary reveal">
+        <div class="fd-bar"><span>author: <b>fish#0</b> · 12 sep · makeathon day · tank.local</span><button class="btn sm" id="fdAll" type="button">decrypt all</button></div>
+        <div id="fdList"></div>
+      </div>
+      <p class="reveal" style="font-size:12px;margin-top:14px;color:var(--ink-dimmer)">The fish cannot actually type. We don't know how these got here. The key was generated when this page loaded, and the fish doesn't have it either.</p>
+    </div>
+  </section>
+
+  <!-- ============ QUICKSTART ============ -->
+  <section id="quickstart">
+    <div class="wrap">
+      <div class="tag reveal"><span class="n">08</span> quickstart</div>
+      <h2 class="reveal">Run it yourself. <em>Bring a fish.</em></h2>
+      <p class="reveal">Generate a keypair once, start the tank pipeline, encrypt an entry, then decrypt it. A webcam is required. A fish is strongly encouraged.</p>
+      <div class="term reveal">
+        <div class="term-bar"><span class="dots"><i></i><i></i><i></i></span><span>~/MeenCrypt · zsh</span><button class="btn sm" id="copyBtn" type="button">copy</button></div>
+        <pre id="termOut"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DISPATCHES ============ -->
+  <section id="dispatches">
+    <div class="wrap">
+      <div class="tag reveal"><span class="n">09</span> dispatches from the tank</div>
+      <h2 class="reveal">Notes on how this got built.</h2>
+      <div class="cards reveal">
+        <a href="https://github.com/abijit2626/MeenCrypt/blob/main/documentary/how-it-was-built.md" target="_blank" rel="noopener">
+          <span class="k">writeup</span><div class="t">How MeenCrypt was built ↗</div>
+          <div class="d">The full engineering log, from v1 to the RSA hybrid, including why the fish can never be a secret.</div>
+        </a>
+        <a href="https://github.com/abijit2626/MeenCrypt/tree/main/tests" target="_blank" rel="noopener">
+          <span class="k">receipts</span><div class="t">236 test functions ↗</div>
+          <div class="d">Tests cover canonicalization, RSA wrap and unwrap, the collector, audio serial, and drive detection.</div>
+        </a>
+        <a href="https://github.com/abijit2626/MeenCrypt" target="_blank" rel="noopener">
+          <span class="k">source</span><div class="t">Read the whole repo ↗</div>
+          <div class="d">The CLI, FastAPI server, both React apps, vision tracker, and ESP32 audio capture.</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TEAM ============ -->
+  <section id="team">
+    <div class="wrap">
+      <div class="tag reveal"><span class="n">10</span> team fishrand</div>
+      <h2 class="reveal">Come swim with us.</h2>
+      <p class="reveal">The two of us started FISHRAND together for TinkerHub's Useless Projects: real engineering behind a deliberately unnecessary idea.</p>
+      <div class="team reveal">
+        <div class="person">
+          <div class="name">Abijit Arun</div>
+          <a class="handle" href="https://github.com/abijit2626" target="_blank" rel="noopener">@abijit2626</a>
+          <div class="role">Co-founded FISHRAND. Wrote the whole fishrand crypto library, every version from v1 to the v4 RSA-OAEP hybrid, including the v3 fish-chain. Also built the canonicalization and SHA-256 conditioning, the adaptive fish/audio quality gate, the collector, the CLI, most of the test suite, the build writeup, and the honest security model the whole project stands on.</div>
+        </div>
+        <div class="person">
+          <div class="name">Sreelal VS</div>
+          <a class="handle" href="https://github.com/archSLAYER44" target="_blank" rel="noopener">@archSLAYER44</a>
+          <div class="role">Co-founded FISHRAND. The OpenCV vision tracker (vision.py) that watches the fish, the FastAPI server, both React apps and the v5 dashboard polish (live charts, quality tiers, tamper test), ESP32 USB-serial audio capture, drive binding by hardware serial, and run.sh orchestration.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section id="faq">
+    <div class="wrap">
+      <div class="tag reveal"><span class="n">11</span> questions we'd ask too</div>
+      <h2 class="reveal">FAQ</h2>
+      <div class="reveal">
+        <details class="faq-item" open>
+          <summary>Is this actually secure?</summary>
+          <p>Yes. The diary is sealed with AES-256-GCM. RSA-3072-OAEP wraps the session key. Randomness comes from your OS's CSPRNG. That part is standard and tested. The fish is not part of your threat model.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What does the fish actually contribute?</summary>
+          <p>OpenCV watches it, and an optional ESP32 mic listens in. That observation is canonicalized, hashed with SHA-256, and fed into HKDF as a fingerprint of the moment. It is not a source of randomness. Anyone with the same webcam feed could reconstruct it, so it can never be secret.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Do I need the fish to decrypt?</summary>
+          <p>No. Since v4, only the RSA private key is needed. The fish hash stays in the package as audit metadata about the tank at the moment you wrote. It never controls whether you can decrypt.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What if someone copies my private key file?</summary>
+          <p>Entries you write in the diary app are bound to the physical drive their key was saved to, identified by the drive's hardware serial. Without that exact drive plugged in, the server refuses with "insert the drive this entry needs". To be honest about it: the server enforces this check on top of the crypto. It is not part of the encryption, and the CLI with the key file alone can still decrypt.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What happens if I lose the USB drive?</summary>
+          <p>The diary stays encrypted forever. There's no recovery flow and no backdoor. That is the design, not a bug.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Do I need the microphone?</summary>
+          <p>No. The vision tracker alone runs the full pipeline. The mic only steps in when the fish are too still to track well.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Why does this exist?</summary>
+          <p>TinkerHub's "Useless Projects" hackathon asked for real engineering behind a deliberately unnecessary idea. This is that.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <div>
+        <div class="brand"><span class="glyph">&gt;&lt;(((°&gt;</span> MEENCRYPT</div>
+        <div class="foot-b64" id="footB64" title="hover or tap to decode" role="button" tabindex="0" aria-pressed="false"><span class="enc" id="footEnc"></span><span class="dec" id="footDec"></span></div>
+      </div>
+      <div class="foot-links">
+        <a href="https://github.com/abijit2626/MeenCrypt" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/abijit2626/MeenCrypt/blob/main/documentary/how-it-was-built.md" target="_blank" rel="noopener">Writeup</a>
+        <a href="https://www.tinkerhub.org" target="_blank" rel="noopener">TinkerHub</a>
+      </div>
+    </div>
+  </div>
+  <div class="foot-fish" aria-hidden="true">&gt;&lt;(((°&gt; &nbsp;°&nbsp; o</div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+  var root = document.documentElement;
+  root.classList.add('js');
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var enc = new TextEncoder();
+
+  function hex(u8){ var s=''; for (var i=0;i<u8.length;i++) s += u8[i].toString(16).padStart(2,'0'); return s; }
+  function b64(u8){ var s=''; for (var i=0;i<u8.length;i++) s += String.fromCharCode(u8[i]); return btoa(s); }
+  function unb64(t){ var s=atob(t), u=new Uint8Array(s.length); for (var i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; }
+  function cut(h, n){ return h.length > n ? h.slice(0,n) + '…' : h; }
+  function $(id){ return document.getElementById(id); }
+
+  /* ---------------- theme ---------------- */
+  var mq = window.matchMedia('(prefers-color-scheme: light)');
+  try { var saved = localStorage.getItem('mc-theme'); if (saved) root.setAttribute('data-theme', saved); } catch(e){}
+  $('themeBtn').addEventListener('click', function(){
+    var cur = root.getAttribute('data-theme') || (mq.matches ? 'light' : 'dark');
+    var next = cur === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('mc-theme', next); } catch(e){}
+    readColors();
+  });
+  if (mq.addEventListener) mq.addEventListener('change', function(){ readColors(); });
+
+  var C = {};
+  function readColors(){
+    var cs = getComputedStyle(root);
+    ['tank','accent','water','ink','ink-dim','ink-dimmer','border','bad','ok'].forEach(function(k){ C[k] = cs.getPropertyValue('--'+k).trim(); });
+    if (tank) tank.draw();
+  }
+
+  /* ---------------- boot line + clock ---------------- */
+  (function(){
+    var el = $('boot');
+    var items = [['core/crypto.py',100],['fishrand/rsa_hybrid.py',100],['vision.py',100],['fish.mood',0]];
+    var bs = items.map(function(it){
+      var s = document.createElement('span');
+      s.innerHTML = it[0] + ' <b>0%</b>';
+      el.appendChild(s);
+      return s.querySelector('b');
+    });
+    function set(t){
+      items.forEach(function(it,i){
+        var v = Math.min(it[1], t);
+        bs[i].textContent = v + '%';
+        bs[i].className = it[1] === 0 ? 'zero' : (v >= it[1] ? 'done' : '');
+      });
+    }
+    if (reduced){ set(100); return; }
+    var t = 0, iv = setInterval(function(){ t += 3; set(t); if (t >= 100) clearInterval(iv); }, 30);
+  })();
+  (function(){
+    var out = $('clockOut');
+    function pad(n){ return n<10 ? '0'+n : ''+n; }
+    function f(){ var d=new Date(); out.textContent = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }
+    f(); setInterval(f, 1000);
+  })();
+
+  /* ---------------- the tank ---------------- */
+  var tank = (function(){
+    var cv = $('tank'), ctx = cv.getContext('2d');
+    var W = 0, H = 0, frameNo = 0, running = false, visible = true, last = 0, showCV = true;
+    var fish = [], bubbles = [], food = [], weeds = [], pointer = null;
+    var snail = { x: 60, dir: 1 };
+    var FONT = "'JetBrains Mono', ui-monospace, monospace";
+    var canHover = window.matchMedia('(hover: hover)').matches;
+
+    function resize(){
+      var r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = r.width; H = r.height;
+      cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      weeds = [];
+      var n = Math.max(3, Math.round(W/150));
+      for (var i=0;i<n;i++) weeds.push({ x: (i+0.5)*W/n + (Math.random()-0.5)*50, len: 4 + (Math.random()*6|0), seed: Math.random()*9 });
+      fish.forEach(function(f){ f.x = Math.min(f.x, W-40); f.y = Math.min(f.y, H-70); });
+      draw();
+    }
+
+    function spawn(){
+      var n = W < 500 ? 4 : 6;
+      for (var i=0;i<n;i++){
+        fish.push({
+          id: i, x: 60 + Math.random()*(W-120), y: 50 + Math.random()*(H-140),
+          vx: (Math.random()-0.5)*1.4, vy: 0, wa: Math.random()*6.28,
+          face: Math.random() < .5 ? 1 : -1, big: i % 3 !== 2,
+          max: 0.9 + Math.random()*0.7, size: i % 3 !== 2 ? 15 : 12
+        });
+      }
+    }
+
+    function glyph(f, t){
+      var wig = ((t/180 + f.id*1.7) | 0) % 2;
+      if (f.big) return f.face > 0 ? (wig ? '}' : '>') + '<(((°>' : '<°)))>' + (wig ? '{' : '<');
+      return f.face > 0 ? (wig ? '}' : '>') + '<>' : '<>' + (wig ? '{' : '<');
+    }
+
+    function step(dt, t){
+      fish.forEach(function(f){
+        f.wa += (Math.random()-0.5)*0.22*dt;
+        var ax = Math.cos(f.wa)*0.03, ay = Math.sin(f.wa)*0.012;
+        var tx = null, ty = null, str = 0;
+        if (food.length){
+          var best = null, bd = 1e9;
+          food.forEach(function(p){ var d = Math.hypot(p.x-f.x, p.y-f.y); if (d < bd){ bd = d; best = p; } });
+          tx = best.x; ty = best.y; str = 0.07;
+          if (bd < 14){ food.splice(food.indexOf(best),1); for (var k=0;k<4;k++) bubbles.push(bub(f.x+f.face*20, f.y-4)); }
+        } else if (pointer){
+          var d = Math.hypot(pointer.x-f.x, pointer.y-f.y);
+          if (d < 260 && d > 46){ tx = pointer.x; ty = pointer.y; str = 0.028; }
+          else if (d <= 46){ tx = f.x - (pointer.x-f.x); ty = f.y - (pointer.y-f.y); str = 0.02; }
+        }
+        if (tx !== null){ var dx = tx-f.x, dy = ty-f.y, dd = Math.hypot(dx,dy)||1; ax += dx/dd*str; ay += dy/dd*str; }
+        var m = 46;
+        if (f.x < m) ax += 0.06; if (f.x > W-m) ax -= 0.06;
+        if (f.y < 34) ay += 0.05; if (f.y > H-64) ay -= 0.05;
+        f.vx += ax*dt; f.vy += ay*dt;
+        var sp = Math.hypot(f.vx, f.vy), mx = f.max * (food.length ? 1.9 : 1);
+        if (sp > mx){ f.vx *= mx/sp; f.vy *= mx/sp; }
+        f.vy *= 0.985;
+        f.x += f.vx*dt; f.y += f.vy*dt;
+        if (f.vx > 0.12) f.face = 1; else if (f.vx < -0.12) f.face = -1;
+        if (Math.random() < 0.006*dt) bubbles.push(bub(f.x + f.face*22, f.y-4));
+      });
+      bubbles.forEach(function(b){ b.y -= b.v*dt; b.x += Math.sin((t+b.s)/300)*0.25; });
+      bubbles = bubbles.filter(function(b){ return b.y > 6; });
+      food.forEach(function(p){ if (p.y < H-24) p.y += 0.35*dt; p.x += Math.sin((t+p.s)/400)*0.15; });
+      snail.x += 0.07*snail.dir*dt;
+      if (snail.x > W-30) snail.dir = -1; if (snail.x < 30) snail.dir = 1;
+    }
+    function bub(x,y){ return { x:x, y:y, v:0.35+Math.random()*0.45, s:Math.random()*999, c:Math.random()<.5?'o':'°' }; }
+
+    function draw(t){
+      t = t || performance.now();
+      if (!W) return;
+      ctx.fillStyle = C.tank; ctx.fillRect(0,0,W,H);
+      ctx.textBaseline = 'middle';
+
+      // sand + weeds
+      ctx.font = '11px ' + FONT; ctx.fillStyle = C['ink-dimmer']; ctx.globalAlpha = .5; ctx.textAlign = 'left';
+      var sand = ''; for (var i=0;i<W/7;i++) sand += (i*7 % 5 ? '.' : ',');
+      ctx.fillText(sand, 0, H-8);
+      ctx.globalAlpha = .75; ctx.fillStyle = C.water; ctx.textAlign = 'center'; ctx.font = '13px ' + FONT;
+      weeds.forEach(function(w){
+        for (var j=0;j<w.len;j++){
+          var off = Math.sin(t/900 + j*0.55 + w.seed) * j * 1.3;
+          ctx.fillText(j % 2 ? ')' : '(', w.x + off, H - 20 - j*12);
+        }
+      });
+      ctx.globalAlpha = 1;
+
+      // snail
+      ctx.font = '12px ' + FONT; ctx.fillStyle = C['ink-dim'];
+      ctx.fillText(snail.dir > 0 ? '_@)' : '(@_', snail.x, H-20);
+      if (showCV){
+        ctx.font = '9px ' + FONT; ctx.fillStyle = C['ink-dimmer'];
+        ctx.fillText('ignored: snail', snail.x, H-34);
+      }
+
+      // food
+      ctx.fillStyle = C.accent; ctx.font = '14px ' + FONT;
+      food.forEach(function(p){ ctx.fillText('·', p.x, p.y); });
+
+      // bubbles
+      ctx.font = '11px ' + FONT; ctx.fillStyle = C.water;
+      bubbles.forEach(function(b){ ctx.globalAlpha = Math.min(1, b.y/80) * .8; ctx.fillText(b.c, b.x, b.y); });
+      ctx.globalAlpha = 1;
+
+      // fish + tracker boxes
+      fish.forEach(function(f){
+        ctx.font = '600 ' + f.size + 'px ' + FONT;
+        var g = glyph(f, t), tw = ctx.measureText(g).width;
+        ctx.fillStyle = f.big ? C.accent : C.ink;
+        ctx.fillText(g, f.x, f.y);
+        if (showCV){
+          ctx.strokeStyle = C.water; ctx.lineWidth = 1; ctx.globalAlpha = .7;
+          var bx = f.x - tw/2 - 5, by = f.y - f.size/2 - 5, bw = tw + 10, bh = f.size + 10;
+          ctx.strokeRect(Math.round(bx)+.5, Math.round(by)+.5, Math.round(bw), Math.round(bh));
+          ctx.globalAlpha = 1;
+          ctx.font = '9px ' + FONT; ctx.fillStyle = C.water; ctx.textAlign = 'left';
+          ctx.fillText('fish#' + f.id + ' v=' + Math.hypot(f.vx,f.vy).toFixed(2), bx, by - 7);
+          ctx.textAlign = 'center';
+        }
+      });
+
+      // hint
+      ctx.font = '10.5px ' + FONT; ctx.fillStyle = C['ink-dimmer']; ctx.textAlign = 'right';
+      ctx.fillText(canHover ? 'move to be watched · click to feed' : 'tap to feed the fish', W - 12, 14);
+      ctx.textAlign = 'center';
+
+      // observer
+      if (pointer){
+        ctx.strokeStyle = C['ink-dimmer']; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(pointer.x-7,pointer.y); ctx.lineTo(pointer.x+7,pointer.y);
+        ctx.moveTo(pointer.x,pointer.y-7); ctx.lineTo(pointer.x,pointer.y+7); ctx.stroke();
+        ctx.font = '9px ' + FONT; ctx.fillStyle = C['ink-dimmer']; ctx.textAlign = 'left';
+        ctx.fillText('observer', pointer.x + 10, pointer.y - 10);
+        ctx.textAlign = 'center';
+      }
+    }
+
+    function loop(t){
+      if (!running) return;
+      var dt = last ? Math.min(3, (t-last)/16.67) : 1; last = t;
+      step(dt, t); draw(t); frameNo++;
+      requestAnimationFrame(loop);
+    }
+    function start(){ if (running || reduced) return; running = true; last = 0; requestAnimationFrame(loop); }
+    function stop(){ running = false; }
+    function sync(){ if (visible && !document.hidden) start(); else stop(); }
+
+    // canonical frame, shaped like the v2 vision contract
+    function frame(){
+      var ts = Math.round(Date.now()) / 1000;
+      var list = fish.map(function(f){
+        return { id: f.id, centroid: [+f.x.toFixed(1), +f.y.toFixed(1)], speed: +Math.hypot(f.vx,f.vy).toFixed(3), direction_rad: +Math.atan2(f.vy,f.vx).toFixed(3) };
+      });
+      var avg = list.reduce(function(a,f){ return a + f.speed; }, 0) / (list.length || 1);
+      var quality = avg > 0.45 ? 'GOOD' : avg > 0.2 ? 'MEDIUM' : 'BAD';
+      var json = JSON.stringify({ schema_version: 2, source: 'fish_vision', frames: [{ timestamp: ts, fish_count: list.length, fish: list }] });
+      return { json: json, quality: quality, n: frameNo, count: list.length };
+    }
+
+    cv.addEventListener('pointermove', function(e){ var r = cv.getBoundingClientRect(); pointer = { x: e.clientX-r.left, y: e.clientY-r.top }; if (reduced) draw(); });
+    cv.addEventListener('pointerleave', function(){ if (!touchT) pointer = null; if (reduced) draw(); });
+    // touch has no hover: a tap shows the observer for a few seconds so the fish can come look
+    var touchT = 0;
+    cv.addEventListener('pointerdown', function(e){
+      if (e.pointerType === 'mouse') return;
+      var r = cv.getBoundingClientRect(); pointer = { x: e.clientX-r.left, y: e.clientY-r.top };
+      clearTimeout(touchT);
+      touchT = setTimeout(function(){ touchT = 0; pointer = null; if (reduced) draw(); }, 3500);
+    });
+    cv.addEventListener('click', function(e){
+      var r = cv.getBoundingClientRect(), x = e.clientX-r.left, y = e.clientY-r.top;
+      for (var i=0;i<3;i++) food.push({ x: x + (Math.random()-0.5)*26, y: y + (Math.random()-0.5)*10, s: Math.random()*999 });
+      if (reduced) draw();
+    });
+    $('cvBtn').addEventListener('click', function(){ showCV = !showCV; this.setAttribute('aria-pressed', String(showCV)); draw(); });
+    new IntersectionObserver(function(es){ visible = es[0].isIntersecting; sync(); }).observe(cv);
+    document.addEventListener('visibilitychange', sync);
+    window.addEventListener('resize', resize);
+
+    return { init: function(){ resize(); spawn(); draw(); sync(); }, draw: draw, frame: frame };
+  })();
+
+  readColors();
+  tank.init();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ tank.draw(); });
+
+  /* live digest readout */
+  (function(){
+    var hEl = $('rHash'), fEl = $('rFrame'), qEl = $('rQual'), cur = '';
+    function scramble(to){
+      if (reduced || !cur){ hEl.textContent = to; cur = to; return; }
+      var start = performance.now(), from = cur; cur = to;
+      (function tick(now){
+        var p = Math.min(1, (now-start)/380), k = Math.floor(p*to.length), s = to.slice(0,k);
+        for (var i=k;i<to.length;i++) s += Math.random() < .5 ? from[i] : '0123456789abcdef'[Math.random()*16|0];
+        hEl.textContent = s;
+        if (p < 1 && cur === to) requestAnimationFrame(tick);
+      })(start);
+    }
+    function upd(){
+      if (document.hidden) return;
+      var f = tank.frame();
+      crypto.subtle.digest('SHA-256', enc.encode(f.json)).then(function(d){
+        scramble(hex(new Uint8Array(d)));
+        fEl.textContent = f.n; qEl.textContent = f.quality;
+        qEl.style.color = f.quality === 'GOOD' ? 'var(--ok)' : f.quality === 'MEDIUM' ? 'var(--accent)' : 'var(--bad)';
+      });
+    }
+    upd(); if (!reduced) setInterval(upd, 700);
+  })();
+
+  /* ---------------- encrypt demo ---------------- */
+  (function(){
+    var INFO = 'FISHRAND-AES256-GCM-v4-rsa-hybrid';
+    var AAD = '{"algorithm":"AES-256-GCM","purpose":"FISHRAND-DIARY-V1","version":4}';
+    var NOTE = 'RSA-OAEP hybrid: the ephemeral AES-256 session key is wrapped with your RSA-3072 public key. Decryption needs ONLY the matching RSA private key. fish_hash and the observation metadata are audit information about the tank at encryption time, never a decryption gate.';
+    var keys = null, keyPromise = null;
+    var chip = $('keyChip'), res = $('result'), pkgEl = $('pkg');
+    var encBtn = $('encBtn'), decBtn = $('decBtn'), tamperBtn = $('tamperBtn'), fishBtn = $('fishBtn'), dlBtn = $('dlBtn');
+
+    if (!window.crypto || !crypto.subtle){
+      encBtn.disabled = true; chip.textContent = 'WebCrypto unavailable (needs https or localhost)';
+      return;
+    }
+
+    function getKeys(){
+      if (keyPromise) return keyPromise;
+      chip.textContent = 'USB: generating RSA-3072 keypair…';
+      keyPromise = crypto.subtle.generateKey(
+        { name:'RSA-OAEP', modulusLength:3072, publicExponent:new Uint8Array([1,0,1]), hash:'SHA-256' },
+        false, ['encrypt','decrypt']
+      ).then(function(k){ keys = k; chip.textContent = 'USB: keypair ready (tab memory)'; chip.classList.add('ready'); return k; });
+      return keyPromise;
+    }
+    new IntersectionObserver(function(es, o){ if (es[0].isIntersecting){ getKeys(); o.disconnect(); } }, { rootMargin:'200px' }).observe($('demo'));
+
+    var lis = {};
+    Array.prototype.forEach.call(document.querySelectorAll('#steps li'), function(li){ lis[li.dataset.s] = li; });
+    function mark(name, html){ var li = lis[name]; li.classList.add('on'); li.querySelector('.v').innerHTML = html; }
+    function wait(ms){ return new Promise(function(r){ setTimeout(r, reduced ? 0 : ms); }); }
+    function setRes(cls, html){ res.className = 'result' + (cls ? ' ' + cls : ''); res.innerHTML = html; }
+    function esc(s){ return s.replace(/[&<>"]/g, function(c){ return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); }
+
+    encBtn.addEventListener('click', function(){
+      var text = $('diary').value;
+      if (!text.trim()){ setRes('err', 'the fish refuses to witness an empty page.'); return; }
+      encBtn.disabled = true;
+      Object.keys(lis).forEach(function(k){ lis[k].classList.remove('on'); });
+      setRes('', '// encrypting…');
+      var f, frameBytes, digest, secret, sessionKey, nonce, ct, wrapped;
+      getKeys().then(function(){
+        f = tank.frame(); frameBytes = enc.encode(f.json);
+        mark('observe', 'frame #' + f.n + ' · ' + f.count + ' fish · ' + frameBytes.length + ' bytes<small>quality ' + f.quality + (f.quality === 'GOOD' ? ', so fish alone conditions the key' : ', the real CLI would add the mic here') + '</small>');
+        return wait(260).then(function(){ return crypto.subtle.digest('SHA-256', frameBytes); });
+      }).then(function(d){
+        digest = new Uint8Array(d);
+        mark('condition', cut(hex(digest), 32) + '<small>public, so the fish adds 0 bits</small>');
+        return wait(260);
+      }).then(function(){
+        secret = crypto.getRandomValues(new Uint8Array(32));
+        mark('secret', cut(hex(secret), 32) + '<small>crypto.getRandomValues, the stand-in for os.urandom</small>');
+        return wait(260);
+      }).then(function(){
+        var ikm = new Uint8Array(64); ikm.set(secret, 0); ikm.set(digest, 32);
+        return crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+      }).then(function(k){
+        return crypto.subtle.deriveBits({ name:'HKDF', hash:'SHA-256', salt:new Uint8Array(0), info:enc.encode(INFO) }, k, 256);
+      }).then(function(bits){
+        sessionKey = new Uint8Array(bits);
+        mark('derive', cut(hex(sessionKey), 32) + '<small>ephemeral AES-256 session key, never stored</small>');
+        return wait(260).then(function(){ return crypto.subtle.importKey('raw', sessionKey, 'AES-GCM', false, ['encrypt']); });
+      }).then(function(aesKey){
+        nonce = crypto.getRandomValues(new Uint8Array(12));
+        return crypto.subtle.encrypt({ name:'AES-GCM', iv:nonce, additionalData:enc.encode(AAD) }, aesKey, enc.encode(text));
+      }).then(function(c){
+        ct = new Uint8Array(c);
+        mark('seal', ct.length + ' bytes (ciphertext ‖ 16-byte tag)<small>nonce ' + hex(nonce) + '</small>');
+        return wait(260).then(function(){ return crypto.subtle.encrypt({ name:'RSA-OAEP' }, keys.publicKey, sessionKey); });
+      }).then(function(w){
+        wrapped = new Uint8Array(w);
+        mark('wrap', wrapped.length + ' bytes of wrapped key<small>session key discarded, secret discarded</small>');
+        sessionKey.fill(0); secret.fill(0);
+        var pkg = {
+          version: 4, algorithm: 'AES-256-GCM', kdf: 'HKDF-SHA256',
+          fish_hash: hex(digest), kdf_context: INFO,
+          nonce_b64: b64(nonce), aad_b64: b64(enc.encode(AAD)), payload_b64: b64(ct),
+          key_algorithm: 'RSA-OAEP-SHA256', rsa_key_size: 3072,
+          encrypted_session_key_b64: b64(wrapped),
+          metadata: { fish_quality: f.quality, observation_mode: 'fish', frame: f.n, created_at: new Date().toISOString(), security_note: NOTE, demo: 'browser' }
+        };
+        pkgEl.value = JSON.stringify(pkg, null, 2);
+        [decBtn, tamperBtn, fishBtn, dlBtn].forEach(function(b){ b.disabled = false; });
+        setRes('', '// sealed. no secret is inside this package.\n// try decrypting, or flip a byte first.');
+      }).catch(function(e){
+        setRes('err', 'error: ' + esc(String(e && e.message || e)));
+      }).then(function(){ encBtn.disabled = false; });
+    });
+
+    function readPkg(){
+      var p = JSON.parse(pkgEl.value);
+      ['nonce_b64','aad_b64','payload_b64','encrypted_session_key_b64'].forEach(function(k){ if (typeof p[k] !== 'string') throw new Error('package missing field: ' + k); });
+      if (p.version !== 4) throw new Error('unsupported package version');
+      return p;
+    }
+
+    decBtn.addEventListener('click', function(){
+      var p;
+      try { p = readPkg(); } catch(e){ setRes('err', 'ValueError: ' + esc(e.message)); return; }
+      setRes('', '// unwrapping session key with private key…');
+      crypto.subtle.decrypt({ name:'RSA-OAEP' }, keys.privateKey, unb64(p.encrypted_session_key_b64))
+        .catch(function(){ throw new Error('RSA unwrap failed: wrapped key corrupted or wrong private key'); })
+        .then(function(raw){ return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']); })
+        .then(function(k){
+          return crypto.subtle.decrypt({ name:'AES-GCM', iv:unb64(p.nonce_b64), additionalData:unb64(p.aad_b64) }, k, unb64(p.payload_b64))
+            .catch(function(){ throw new Error('AuthenticationFailure: GCM tag mismatch. The package was modified. Not one byte of plaintext was released.'); });
+        })
+        .then(function(pt){
+          setRes('ok', '✓ decrypted with the private key alone. no fish was consulted.<span class="plain">' + esc(new TextDecoder().decode(pt)) + '</span>');
+        })
+        .catch(function(e){ setRes('err', '✗ ' + esc(e.message || String(e))); });
+    });
+
+    tamperBtn.addEventListener('click', function(){
+      var p;
+      try { p = readPkg(); } catch(e){ setRes('err', 'ValueError: ' + esc(e.message)); return; }
+      var u = unb64(p.payload_b64), i = Math.random()*u.length | 0;
+      u[i] ^= 1 << (Math.random()*8 | 0);
+      p.payload_b64 = b64(u);
+      pkgEl.value = JSON.stringify(p, null, 2);
+      setRes('', '// flipped one bit in payload byte ' + i + '. now try decrypting.');
+    });
+
+    fishBtn.addEventListener('click', function(){
+      var lines = ['><(((°>  ...blub.', '><(((°>  blub blub?', '<°)))><  *swims away*', '><(((°>  ° o  (it looked at the package for eleven seconds)'];
+      setRes('fish', lines[Math.random()*lines.length | 0] + '\n\nThe fish does not have your private key. Nobody does except your USB drive. The fish_hash is audit metadata. It records what the tank looked like, and it cannot open anything.');
+    });
+
+    dlBtn.addEventListener('click', function(){
+      var blob = new Blob([pkgEl.value], { type:'application/json' });
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'diary.pkg';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+    });
+  })();
+
+  /* ---------------- base64 easter eggs ---------------- */
+  (function(){
+    var code = [
+      'def derive_key(observation_digest, secret, *, info=RSA_HYBRID_INFO):',
+      '    hkdf = HKDF(',
+      '        algorithm=hashes.SHA256(),',
+      '        length=32,',
+      '        salt=None,',
+      '        info=info.encode("utf-8"),',
+      '    )',
+      '    return hkdf.derive(secret + observation_digest)'
+    ].join('\n');
+    $('b64enc').textContent = btoa(code);
+    $('b64dec').textContent = code;
+    $('b64').addEventListener('click', function(){
+      var d = $('b64dec'), e = $('b64enc');
+      d.hidden = !d.hidden; e.hidden = !d.hidden;
+    });
+    var msg = 'MeenCrypt: secrets safe now. the fish knows nothing.';
+    $('footEnc').textContent = btoa(msg);
+    $('footDec').textContent = msg;
+    var fb = $('footB64');
+    function toggleFoot(){ var on = fb.classList.toggle('show'); fb.setAttribute('aria-pressed', String(on)); }
+    fb.addEventListener('click', toggleFoot);
+    fb.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleFoot(); } });
+    var foot = document.querySelector('footer');
+    foot.addEventListener('click', function(e){
+      if (e.target.closest('a') || foot.classList.contains('swim')) return;
+      foot.classList.add('swim');
+    });
+    foot.querySelector('.foot-fish').addEventListener('animationend', function(){ foot.classList.remove('swim'); });
+  })();
+
+  /* ---------------- quadrant tooltips ---------------- */
+  (function(){
+    var wrap = $('chartWrap'), tip = $('tip');
+    Array.prototype.forEach.call(wrap.querySelectorAll('.pt'), function(g){
+      g.addEventListener('pointerenter', function(){ tip.textContent = g.dataset.tip; tip.classList.add('on'); });
+      g.addEventListener('pointermove', function(e){
+        var r = wrap.getBoundingClientRect();
+        var x = Math.min(e.clientX - r.left + 14, r.width - 230);
+        tip.style.left = Math.max(8, x) + 'px'; tip.style.top = (e.clientY - r.top + 14) + 'px';
+      });
+      g.addEventListener('pointerleave', function(){ tip.classList.remove('on'); });
+    });
+  })();
+
+  /* ---------------- the fish's diary ---------------- */
+  (function(){
+    var entries = [
+      ['06:12','mood: groggy','Woke up. Two humans are already staring at me. Neither of them has slept. One of them whispered "entropy" at the glass. I don\'t know what that means. I ate a flake about it.'],
+      ['08:40','mood: famous?','They pointed a webcam at my tank. I am being tracked at 30 frames per second, and there are little boxes around me now with my speed written on them. Is this what fame feels like?'],
+      ['10:05','mood: betrayed','One human read the code out loud: "the fish contributes zero bits." Zero. I swam figure eights for three hours for ZERO bits.'],
+      ['11:30','mood: jealous','The snail is labelled "ignored" on the screen. Nobody is hashing the snail. The snail has never looked happier.'],
+      ['13:15','mood: hungry','Pizza arrived for the humans. Nothing arrived for me. They ate it directly over my tank. Crumbs received: 0. Bits contributed: 0. Consistent, at least.'],
+      ['14:50','mood: replaced','I stopped moving for a minute to think. One human said "fish quality BAD, switch to the mic," and they plugged in a microphone to replace me. A microphone. It doesn\'t even have fins.'],
+      ['16:20','mood: overlooked','The tests are passing, all 236 of them. I asked the tank light which one tests whether I am happy. The light said none.'],
+      ['18:00','mood: philosophical','They keep saying "the private key lives on the USB drive." Must be nice. I live in a bowl that anyone can see into. Nobody wrapped ME in RSA-3072.'],
+      ['21:45','mood: relatable','Someone flipped one byte and the whole diary refused to open: "GCM tag mismatch." Honestly, same. Tap on my glass one more time and see if I open up.'],
+      ['23:58','mood: proud','The demo went well. A judge said the fish is "either the whole idea or the whole joke." I have decided I am the idea.'],
+      ['03:10','mood: free','Both humans are asleep on their keyboards and the webcam is off. I swam four thousand unobserved, unhashed, completely private pixels. Best night of my life. Nobody will ever decrypt this entry.']
+    ];
+    var list = $('fdList'), key = null;
+    function e(x){ return x.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+    var ready = (window.crypto && crypto.subtle)
+      ? crypto.subtle.generateKey({ name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']).then(function(k){
+          key = k;
+          return Promise.all(entries.map(function(en){
+            var iv = crypto.getRandomValues(new Uint8Array(12));
+            return crypto.subtle.encrypt({ name:'AES-GCM', iv:iv }, k, enc.encode(en[2])).then(function(c){ return { iv:iv, ct:new Uint8Array(c) }; });
+          }));
+        })
+      : Promise.resolve(entries.map(function(en){ return { iv:null, ct:enc.encode(en[2]) }; }));
+
+    ready.then(function(sealed){
+      entries.forEach(function(en, i){
+        var row = document.createElement('div');
+        row.className = 'fentry';
+        row.innerHTML = '<div class="tm">' + en[0] + '<small>' + (i === entries.length-1 ? 'day 2' : 'day 1') + '</small></div>' +
+          '<div class="ct">' + b64(sealed[i].ct) + '</div>' +
+          '<button class="btn sm" type="button">decrypt</button>' +
+          '<div class="meta">' + e(en[1]) + ' · bits contributed: <b>0</b></div>';
+        var btn = row.querySelector('button'), ct = row.querySelector('.ct');
+        btn.addEventListener('click', function(){
+          if (row.classList.contains('open')){
+            row.classList.remove('open'); ct.textContent = b64(sealed[i].ct); btn.textContent = 'decrypt'; return;
+          }
+          btn.disabled = true;
+          var p = key ? crypto.subtle.decrypt({ name:'AES-GCM', iv:sealed[i].iv }, key, sealed[i].ct).then(function(pt){ return new TextDecoder().decode(pt); })
+                      : Promise.resolve(en[2]);
+          p.then(function(text){
+            row.classList.add('open'); btn.textContent = 're-encrypt'; btn.disabled = false;
+            if (reduced){ ct.textContent = text; return; }
+            var n = 0;
+            (function tick(){
+              if (!row.classList.contains('open')) return;
+              n = Math.min(text.length, n + 2);
+              ct.innerHTML = e(text.slice(0, n)) + (n < text.length ? '<span class="cur"></span>' : '');
+              if (n < text.length) setTimeout(tick, 14);
+            })();
+          });
+        });
+        list.appendChild(row);
+      });
+    });
+
+    $('fdAll').addEventListener('click', function(){
+      Array.prototype.forEach.call(list.querySelectorAll('.fentry:not(.open) button'), function(b, i){
+        setTimeout(function(){ b.click(); }, reduced ? 0 : i * 180);
+      });
+    });
+  })();
+
+  /* ---------------- terminal ---------------- */
+  var termLines = [
+    ['c','# 1. make the keypair once, then move the private half to a USB stick'],
+    ['k','python',' cli.py keygen --output /media/USB/fishrand'],
+    ['',''],
+    ['c','# 2. start the tank: vision tracker + server + dashboard + diary'],
+    ['k','./run.sh',' --web --camera-index 2 --audio-port /dev/ttyUSB0'],
+    ['',''],
+    ['c','# 3. encrypt with the public key, decrypt with the private one'],
+    ['k','python',' cli.py encrypt --diary examples/diary.txt \\'],
+    ['','    --public-key /media/USB/fishrand/public_key.pem --out diary.pkg'],
+    ['k','python',' cli.py decrypt --pkg diary.pkg \\'],
+    ['','    --private-key /media/USB/fishrand/private_key.pem'],
+    ['',''],
+    ['c','# 4. let the fish rest'],
+    ['k','./run.sh',' --stop']
+  ];
+  (function(){
+    var out = $('termOut');
+    function lineHTML(l, n){
+      var full = l[0] === 'k' ? l[1] + l[2] : l[1];
+      var s = full.slice(0, n), e = function(x){ return x.replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
+      if (l[0] === 'c') return '<span class="c">' + e(s) + '</span>';
+      if (l[0] === 'k'){ var a = s.slice(0, l[1].length), b = s.slice(l[1].length); return '<span class="k">' + e(a) + '</span>' + e(b); }
+      return e(s);
+    }
+    function full(){ return termLines.map(function(l){ return lineHTML(l, 1e9); }).join('\n'); }
+    function type(){
+      var li = 0, ci = 0, done = [];
+      (function tick(){
+        if (li >= termLines.length){ out.innerHTML = done.join('\n') + '\n<span class="k">$</span> <span class="caret"></span>'; return; }
+        var l = termLines[li], len = (l[0] === 'k' ? l[1] + l[2] : l[1]).length;
+        ci += l[0] === 'c' ? 4 : 2;
+        if (ci >= len){ done.push(lineHTML(l, len)); li++; ci = 0; out.innerHTML = done.join('\n'); setTimeout(tick, l[0] === 'k' ? 220 : 60); return; }
+        out.innerHTML = done.concat(lineHTML(l, ci) + '<span class="caret"></span>').join('\n');
+        setTimeout(tick, 16);
+      })();
+    }
+    if (reduced){ out.innerHTML = full(); }
+    else new IntersectionObserver(function(es, o){ if (es[0].isIntersecting){ type(); o.disconnect(); } }, { threshold:.35 }).observe(out);
+    $('copyBtn').addEventListener('click', function(){
+      var txt = termLines.map(function(l){ return l[0] === 'k' ? l[1] + l[2] : l[1]; }).join('\n');
+      var btn = this;
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){ btn.textContent = 'copied ✓'; }, function(){ btn.textContent = 'copy failed'; })
+        .then(function(){ setTimeout(function(){ btn.textContent = 'copy'; }, 1400); });
+    });
+  })();
+
+  /* ---------------- reveal, counters, pipeline packets ---------------- */
+  (function(){
+    function count(el){
+      var target = +el.dataset.count;
+      if (reduced || !target){ el.textContent = target; return; }
+      var s = performance.now();
+      (function t(now){ var p = Math.min(1, (now-s)/1200), e = 1 - Math.pow(1-p, 3); el.textContent = Math.round(target*e); if (p < 1) requestAnimationFrame(t); })(s);
+    }
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if (!e.isIntersecting) return;
+        e.target.classList.add('in');
+        Array.prototype.forEach.call(e.target.querySelectorAll('[data-count]'), count);
+        io.unobserve(e.target);
+      });
+    }, { threshold:.12 });
+    Array.prototype.forEach.call(document.querySelectorAll('.reveal'), function(el){ io.observe(el); });
+
+    var svg = $('pipeSvg');
+    if (reduced){ $('packets').style.display = 'none'; svg.pauseAnimations && svg.pauseAnimations(); return; }
+    svg.pauseAnimations && svg.pauseAnimations();
+    new IntersectionObserver(function(es){
+      if (!svg.unpauseAnimations) return;
+      es[0].isIntersecting ? svg.unpauseAnimations() : svg.pauseAnimations();
+    }).observe(svg);
+  })();
+})();
+</script>
+</body>
+</html>

@@ -7,8 +7,8 @@
 ### Team Name: FISHRAND
 
 ### Team Members
-- Team Lead: Abijit Arun (`abijit2626`) - [College]
-- Member 2: Sreelal VS (`archSLAYER44`) - [College]
+- Team Lead: Abijit Arun (`abijit2626`) - [JCET]
+- Member 2: Sreelal VS (`archSLAYER44`) - [JCET]
 
 ### Project Description
 Your secrets are safe with 🐟 — MeenCrypt encrypts a diary using measurements

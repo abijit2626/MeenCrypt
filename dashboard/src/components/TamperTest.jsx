@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { streamPipeline } from '../api'
+import Icon from './Icon'
 
 // Demo stunt: flip one bit in the ciphertext of the current package and
 // show the GCM tag refusing to verify. Since v4 packages decrypt with the
@@ -49,7 +50,9 @@ export default function TamperTest({ disabled }) {
 
   return (
     <section className={`panel tamper-panel ${disabled ? 'dim' : ''}`}>
-      <h2>🫀 5 · Tamper test</h2>
+      <div className="panel-head">
+        <h2><Icon name="pulse" /> 5 · Tamper test</h2>
+      </div>
       <p className="hint">
         Flip one ciphertext bit, then watch the AES-256-GCM tag refuse to
         authenticate the tampered payload.
@@ -57,7 +60,7 @@ export default function TamperTest({ disabled }) {
       <div className="row-between">
         <button className="btn ghost" onClick={() => keyRef.current?.click()}>load private_key.pem</button>
         <input ref={keyRef} type="file" accept=".pem,.txt" hidden onChange={onLoadKey} />
-        {privateKeyPem && <span className="tag ok">🔑 key loaded</span>}
+        {privateKeyPem && <span className="tag ok"><Icon name="key" size={12} /> key loaded</span>}
       </div>
       <button onClick={onTamper} className="btn danger" disabled={disabled || noKey || result === 'running'}>
         {result === 'running' ? 'Tampering…' : 'Flip a bit & re-decrypt'}
@@ -73,7 +76,7 @@ export default function TamperTest({ disabled }) {
         <div className="tag bad big">AUTHENTICATION FAILED — tampered data rejected</div>
       )}
       {result === 'unexpected-success' && (
-        <div className="tag bad big">⚠ tamper undetected (bug!)</div>
+        <div className="tag bad big"><Icon name="warning" size={13} /> tamper undetected (bug!)</div>
       )}
       {result === 'no-package' && (
         <div className="tag">Encrypt something first, then flip a bit here.</div>

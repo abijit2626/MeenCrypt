@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { currentObservations, subscribeFish } from '../api'
+import Icon from './Icon'
 
 function fmt(value, digits = 2) {
   if (value == null) return '—'
@@ -59,7 +60,7 @@ export default function FishSource() {
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>🐟 1 · Live fish vision feed</h2>
+        <h2><Icon name="fish" /> 1 · Live fish vision feed</h2>
       </div>
 
       <div className="feed-status">

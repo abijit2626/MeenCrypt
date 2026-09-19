@@ -4,6 +4,7 @@ Includes fixes for trail accumulation, ID thrashing, and noise blobs.
 """
 
 import os
+import pathlib
 import time
 import math
 import itertools
@@ -30,6 +31,14 @@ JSON_LOG_INTERVAL = 2.0  # seconds
 PRINT_JSON_TO_TERMINAL = True
 SAVE_JSON_TO_FILE = True
 JSON_FILENAME = "fish_log.json"
+
+# Live camera preview for the web dashboard (server/main.py's
+# /api/vision/stream and /api/vision/snapshot - see server/config.py's
+# FISHRAND_VISION_FRAME_PATH docs). This process never opens a socket
+# itself: it just drops the latest annotated frame here as a JPEG, same
+# disk-handoff pattern as JSON_FILENAME above, and the server re-reads it.
+FRAME_INTERVAL_S = float(os.environ.get("FISHRAND_VISION_FRAME_INTERVAL_S", "0.2"))  # ~5fps
+FRAME_PATH = pathlib.Path(os.environ.get("FISHRAND_VISION_FRAME_PATH", "data/vision/frame.jpg"))
 
 
 def find_camera_index(max_check: int = 5):
@@ -299,6 +308,8 @@ def main():
     viz = Visualizer()
     show_mask = False
     last_json_time = time.time()
+    last_frame_time = 0.0
+    FRAME_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     print("Running. Focus the preview window and use q/+/-/t/m/s/d.")
 
@@ -311,6 +322,18 @@ def main():
         tracker.min_contour_area = MIN_CONTOUR_AREA
         result = tracker.process_frame(frame)
         annotated = viz.draw(frame.copy(), result, MIN_CONTOUR_AREA, tracker.detect_shadows, tracker.tracks.keys())
+
+        # Drop the latest annotated frame for the dashboard's live preview
+        # (server/main.py's /api/vision/stream) - write-then-replace so a
+        # reader never sees a half-written file.
+        current_frame_time = time.time()
+        if current_frame_time - last_frame_time >= FRAME_INTERVAL_S:
+            ok_enc, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            if ok_enc:
+                tmp_path = FRAME_PATH.with_suffix(".tmp")
+                tmp_path.write_bytes(buf.tobytes())
+                tmp_path.replace(FRAME_PATH)
+            last_frame_time = current_frame_time
 
         # Non-blocking 5-second interval check
         current_time = time.time()

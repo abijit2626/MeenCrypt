@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import Icon from './Icon'
 
 const STEPS = ['fish_quality', 'validation', 'canonicalization', 'conditioning', 'os_csprng', 'kdf', 'aes_gcm', 'rsa_wrap', 'package', 'rsa_unwrap', 'decrypt']
 
@@ -32,7 +33,7 @@ export default function Pipeline({ events, mode, onRun, busy }) {
   return (
     <section className="panel pipeline-panel">
       <div className="panel-head">
-        <h2>⚙️ 2 · Pipeline ({mode === 'decrypt' ? 'decrypt' : 'encrypt'})</h2>
+        <h2><Icon name="gear" /> 2 · Pipeline ({mode === 'decrypt' ? 'decrypt' : 'encrypt'})</h2>
         <div className="panel-actions">
           {onRun && (
             <button className="btn primary" onClick={onRun} disabled={busy}>

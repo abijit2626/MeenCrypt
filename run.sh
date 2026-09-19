@@ -8,6 +8,10 @@
 #   ./run.sh --web                 ...plus dashboard (5173) + diary (5174)
 #   ./run.sh --cli-test            one-shot encrypt/decrypt smoke test, then stop
 #   ./run.sh --camera-index 2      point vision.py at /dev/video2 (droidcam)
+#   ./run.sh --audio-port /dev/ttyUSB0   ESP32 mic serial device (see
+#                                   server/config.py's FISHRAND_AUDIO_PORT).
+#                                   Unset -> audio capture is skipped
+#                                   entirely, same as not setting the env var.
 #   ./run.sh --inbox /path         dir vision.py's fish_log.json lives in
 #   ./run.sh --stop                stop everything a previous run started
 #   ./run.sh --skip-vision         don't start vision.py (e.g. already running)
@@ -32,9 +36,10 @@ CLI_TEST=0
 DO_STOP=0
 SKIP_VISION=0
 CAMERA_INDEX=""
+AUDIO_PORT=""
 INBOX_DIR="$ROOT"
 
-usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -43,6 +48,7 @@ while [[ $# -gt 0 ]]; do
     --stop) DO_STOP=1; shift ;;
     --skip-vision) SKIP_VISION=1; shift ;;
     --camera-index) CAMERA_INDEX="$2"; shift 2 ;;
+    --audio-port) AUDIO_PORT="$2"; shift 2 ;;
     --inbox) INBOX_DIR="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; usage; exit 1 ;;
@@ -122,6 +128,10 @@ fi
 # --- step 3: crypto server ---------------------------------------------
 export FISHRAND_FISH_INBOX=1
 export FISHRAND_FISH_INBOX_DIR="$INBOX_DIR"
+if [[ -n "$AUDIO_PORT" ]]; then
+  export FISHRAND_AUDIO_PORT="$AUDIO_PORT"
+  echo "[info] ESP32 mic: $AUDIO_PORT (close the Arduino IDE Serial Monitor first - only one of them can hold the port)"
+fi
 start_bg server "$VENV/bin/uvicorn" server.main:app --port 8000
 
 echo "[wait] waiting for server on :8000 ..."

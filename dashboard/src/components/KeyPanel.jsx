@@ -1,7 +1,11 @@
+import Icon from './Icon'
+
 export default function KeyPanel({ derived = false }) {
   return (
     <section className="panel key-panel">
-      <h2>🔑 4 · Key derivation</h2>
+      <div className="panel-head">
+        <h2><Icon name="key" /> 4 · Key derivation</h2>
+      </div>
       <div className="keyrow"><span>KEY DERIVATION</span>
         <strong className={`tag ${derived ? 'ok' : ''}`}>{derived ? 'COMPLETE' : 'PENDING'}</strong></div>
       <div className="keyrow"><span>KEY SIZE</span><strong className="mono">256 bits (AES) · 3072 bits (RSA)</strong></div>

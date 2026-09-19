@@ -9,6 +9,14 @@
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MeenCrypt · the fish-guarded diary</title>
+    <script>
+      // Set the theme before first paint so there's no flash (see src/lib/theme.js).
+      (function () {
+        var pref = 'light'
+        try { pref = localStorage.getItem('meencrypt-theme') } catch (e) {}
+        document.documentElement.dataset.theme = pref === 'dark' ? 'dark' : 'light'
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

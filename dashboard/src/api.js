@@ -67,6 +67,49 @@ export function subscribeAudio(onUpdate) {
   return es
 }
 
+// Telemetry snapshot (fish activity history, quality-tier counts,
+// encrypt/decrypt rate, HKDF + AES/RSA-wrap latency percentiles).
+export async function fetchMetrics() {
+  const res = await fetch(`${API_BASE}/api/metrics`)
+  if (!res.ok) throw new Error(`metrics: HTTP ${res.status}`)
+  return res.json()
+}
+
+// Persistent SSE feed: pushes `metrics_update` on the server's own
+// broadcast cadence (server/config.py's FISHRAND_METRICS_INTERVAL_S).
+export function subscribeMetrics(onUpdate) {
+  const es = new EventSource(`${API_BASE}/api/metrics/events`)
+  es.addEventListener('metrics_update', (msg) => {
+    try {
+      onUpdate(JSON.parse(msg.data))
+    } catch { /* ignore malformed frame */ }
+  })
+  return es
+}
+
+// Cosmetic LOCKED/UNLOCKED relay the diary app pushes on lock()/unlock() -
+// never the key or any content, see server/main.py's module docstring.
+export async function fetchVaultStatus() {
+  const res = await fetch(`${API_BASE}/api/vault/status`)
+  if (!res.ok) throw new Error(`vault status: HTTP ${res.status}`)
+  return res.json()
+}
+
+export function subscribeVaultStatus(onUpdate) {
+  const es = new EventSource(`${API_BASE}/api/vault/events`)
+  es.addEventListener('vault_update', (msg) => {
+    try {
+      onUpdate(JSON.parse(msg.data))
+    } catch { /* ignore malformed frame */ }
+  })
+  return es
+}
+
+// vision.py's live camera preview, proxied through this server (it never
+// touches a camera itself - see server/main.py's /api/vision/* routes).
+export const VISION_STREAM_URL = `${API_BASE}/api/vision/stream`
+export const VISION_SNAPSHOT_URL = `${API_BASE}/api/vision/snapshot`
+
 // Runs a request and streams `pipe` events to onPipe; resolves with the
 // `done` frame payload.
 export async function streamPipeline(path, body, onPipe) {

@@ -1,3 +1,5 @@
+import Icon from './Icon'
+
 const STAGES = [
   {
     n: '1',
@@ -47,7 +49,7 @@ export default function CryptoExplainer() {
   return (
     <section className="panel explainer">
       <div className="panel-head">
-        <h2>🧠 How the encryption works</h2>
+        <h2><Icon name="info" /> How the encryption works</h2>
       </div>
       {STAGES.map((s) => (
         <div className="explain" key={s.n}>
@@ -59,7 +61,7 @@ export default function CryptoExplainer() {
           </div>
         </div>
       ))}
-      <p className="hint" style={{ marginTop: 10 }}>
+      <p className="hint">
         The fish looks busy, but the real security comes from the operating
         system. That's the honest part of this project.
       </p>

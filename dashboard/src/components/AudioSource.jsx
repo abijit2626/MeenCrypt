@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { currentAudio, subscribeAudio } from '../api'
+import Icon from './Icon'
 
 function fmt(value, digits = 2) {
   if (value == null) return '—'
@@ -38,7 +39,7 @@ export default function AudioSource() {
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>🎙 3 · Live ESP32 mic feed</h2>
+        <h2><Icon name="mic" /> 3 · Live ESP32 mic feed</h2>
       </div>
 
       <div className="feed-status">

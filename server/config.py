@@ -22,6 +22,10 @@ fish-vision repo merges:
                             package lives on disk (default data/diary.pkg).
                             Ciphertext only - the plaintext is never written
                             here; see server/main.py's /api/diary/* routes.
+    FISHRAND_ENTRIES_DIR    where the multi-entry diary keeps one encrypted
+                            package per entry (default data/entries), plus a
+                            plaintext <id>.flags.json sidecar holding only
+                            pinned/archived/deleted_at - never content.
 
     FISHRAND_AUDIO_PORT     serial device for the ESP32 mic (e.g.
                             /dev/ttyUSB0, /dev/ttyACM0). Unset -> audio
@@ -68,6 +72,26 @@ fish-vision repo merges:
     FISHRAND_QUALITY_GOOD_ACTIVITY_MIN   (default 5.0, on the 0-100 scale)
     FISHRAND_QUALITY_MEDIUM_FISH_MIN     (default 1)
     FISHRAND_QUALITY_MEDIUM_ACTIVITY_MIN (default 1.0, on the 0-100 scale)
+
+    FISHRAND_VISION_FRAME_PATH   where vision.py drops the latest annotated
+                            camera frame as a JPEG (default
+                            data/vision/frame.jpg), and where this server's
+                            /api/vision/snapshot + /api/vision/stream read
+                            it from. Written by vision.py directly (which
+                            reads the same env var itself, independent of
+                            this module) - this server never touches a
+                            camera. Missing file -> 404 (vision.py isn't
+                            running, or has no display to capture from).
+    FISHRAND_VISION_STREAM_POLL_S how often (seconds) /api/vision/stream
+                            re-reads that file to push the next MJPEG
+                            frame (default 0.2, i.e. up to ~5fps - matches
+                            vision.py's own default snapshot interval).
+    FISHRAND_METRICS_INTERVAL_S how often (seconds) the dashboard's
+                            /api/metrics/events SSE stream recomputes and
+                            rebroadcasts server/metrics.py's snapshot
+                            (default 2.0). Purely a display cadence - has
+                            no effect on encryption or the underlying
+                            rolling-window sample sizes.
 """
 
 from __future__ import annotations
@@ -84,6 +108,12 @@ VISION_FRAMES = max(1, int(os.getenv("FISHRAND_VISION_FRAMES", "60")))
 _SAMPLE_FALLBACK = REPO_ROOT / "examples" / "sample_vision_data.json"
 DEFAULT_FALLBACK = pathlib.Path(os.getenv("FISHRAND_FISH_FALLBACK", _SAMPLE_FALLBACK))
 DIARY_PATH = pathlib.Path(os.getenv("FISHRAND_DIARY_PATH", REPO_ROOT / "data" / "diary.pkg"))
+ENTRIES_DIR = pathlib.Path(os.getenv("FISHRAND_ENTRIES_DIR", REPO_ROOT / "data" / "entries"))
+VISION_FRAME_PATH = pathlib.Path(
+    os.getenv("FISHRAND_VISION_FRAME_PATH", REPO_ROOT / "data" / "vision" / "frame.jpg")
+)
+VISION_STREAM_POLL_S = max(0.05, float(os.getenv("FISHRAND_VISION_STREAM_POLL_S", "0.2")))
+METRICS_BROADCAST_INTERVAL_S = max(0.5, float(os.getenv("FISHRAND_METRICS_INTERVAL_S", "2.0")))
 
 # The server holds ONLY the public key (it can encrypt, never decrypt).
 PUBLIC_KEY_PATH = pathlib.Path(

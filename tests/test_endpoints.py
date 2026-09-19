@@ -313,3 +313,260 @@ class TestDiaryPersistence:
     def test_save_requires_plaintext(self, keys):
         res = client.post("/api/diary/save", json={"plaintext": ""})
         assert res.status_code == 422
+
+
+_FAKE_DRIVE = {"serial": "TEST-SERIAL-0001", "label": "Test USB Stick", "mountpoint": "/mnt/test-usb"}
+
+
+class TestDiaryEntries:
+    """Multi-entry diary: one encrypted package per entry + plaintext flags."""
+
+    @pytest.fixture(autouse=True)
+    def _isolated_entries(self, tmp_path, monkeypatch):
+        from server import config
+        from server import main as server_main
+
+        monkeypatch.setattr(config, "DIARY_PATH", tmp_path / "diary.pkg")
+        monkeypatch.setattr(config, "ENTRIES_DIR", tmp_path / "entries")
+        monkeypatch.setattr(server_main, "_CURRENT", _good_fish())
+        monkeypatch.setattr(server_main, "_CURRENT_SOURCE", "test:pushed")
+        monkeypatch.setattr(server_main.drive_detect, "list_drives", lambda: [dict(_FAKE_DRIVE)])
+        monkeypatch.setattr(server_main.drive_detect, "is_present", lambda serial: serial == _FAKE_DRIVE["serial"])
+        yield
+
+    def _create(self, plaintext, drive_serial=_FAKE_DRIVE["serial"]):
+        sse = _parse_sse(client.post(
+            "/api/diary/entries", json={"plaintext": plaintext, "drive_serial": drive_serial},
+        ).text)
+        return sse["done"][0]
+
+    def test_empty_list(self, keys):
+        body = client.get("/api/diary/entries").json()
+        assert body == {"encryption_key_exists": True, "entries": []}
+
+    def test_create_list_decrypt_roundtrip(self, keys):
+        first = self._create("entry one")
+        second = self._create("entry two")
+        assert first["status"] == "encrypted" and first["id"] != second["id"]
+        assert first["flags"] == {"pinned": False, "archived": False, "deleted_at": None}
+        # Each entry gets its OWN keypair - never the shared one.
+        assert "BEGIN PRIVATE KEY" in first["private_key_pem"]
+        assert first["private_key_pem"] != second["private_key_pem"]
+
+        entries = client.get("/api/diary/entries").json()["entries"]
+        assert {e["id"] for e in entries} == {first["id"], second["id"]}
+        assert "entry one" not in json.dumps(entries)
+
+        pkg = next(e["package"] for e in entries if e["id"] == first["id"])
+        assert pkg["metadata"]["required_drive_serial"] == _FAKE_DRIVE["serial"]
+        assert pkg["metadata"]["required_drive_label"] == _FAKE_DRIVE["label"]
+        sse = _parse_sse(client.post("/api/decrypt", json={"package": pkg, "private_key_pem": first["private_key_pem"]}).text)
+        assert sse["done"][0]["plaintext"] == "entry one"
+
+        # The shared keypair from `keys` never touches per-entry packages.
+        wrong = _parse_sse(client.post("/api/decrypt", json={"package": pkg, "private_key_pem": keys}).text)
+        assert wrong["done"][0]["status"] == "rejected"
+        assert wrong["done"][0]["code"] == "auth_failed"
+
+    def test_create_rejects_unmounted_drive(self, keys):
+        res = client.post("/api/diary/entries", json={"plaintext": "x", "drive_serial": "not-a-real-drive"})
+        assert res.status_code == 422
+
+    def test_decrypt_blocked_without_required_drive(self, keys, monkeypatch):
+        from server import main as server_main
+
+        entry = self._create("needs my usb")
+        pkg = client.get("/api/diary/entries").json()["entries"][0]["package"]
+
+        # Drive unplugged: correct key still isn't enough.
+        monkeypatch.setattr(server_main.drive_detect, "is_present", lambda serial: False)
+        blocked = _parse_sse(client.post(
+            "/api/decrypt", json={"package": pkg, "private_key_pem": entry["private_key_pem"]},
+        ).text)
+        assert blocked["done"][0]["status"] == "rejected"
+        assert blocked["done"][0]["code"] == "drive_missing"
+        assert _FAKE_DRIVE["label"] in blocked["done"][0]["reason"]
+
+        # Drive plugged back in: same key now works.
+        monkeypatch.setattr(server_main.drive_detect, "is_present", lambda serial: serial == _FAKE_DRIVE["serial"])
+        ok = _parse_sse(client.post(
+            "/api/decrypt", json={"package": pkg, "private_key_pem": entry["private_key_pem"]},
+        ).text)
+        assert ok["done"][0]["status"] == "decrypted"
+
+    def test_old_style_package_without_drive_requirement_unaffected(self, keys, monkeypatch):
+        """A package with no required_drive_serial (e.g. from /api/encrypt)
+        never triggers the drive check at all."""
+        from server import main as server_main
+
+        monkeypatch.setattr(server_main.drive_detect, "is_present", lambda serial: False)
+        enc = _parse_sse(client.post("/api/encrypt", json={"plaintext": "no drive needed"}).text)
+        pkg = enc["done"][0]["package"]
+        assert "required_drive_serial" not in pkg["metadata"]
+        dec = _parse_sse(client.post("/api/decrypt", json={"package": pkg, "private_key_pem": keys}).text)
+        assert dec["done"][0]["status"] == "decrypted"
+
+    def test_vault_drives_endpoint(self, keys):
+        assert client.get("/api/vault/drives").json() == {"drives": [_FAKE_DRIVE]}
+
+    def test_flags_persist(self, keys):
+        entry_id = self._create("pin me")["id"]
+        res = client.patch(f"/api/diary/entries/{entry_id}", json={"pinned": True, "archived": True})
+        assert res.status_code == 200
+        flags = client.get("/api/diary/entries").json()["entries"][0]["flags"]
+        assert flags["pinned"] is True and flags["archived"] is True and flags["deleted_at"] is None
+
+    def test_delete_only_from_bin(self, keys):
+        entry_id = self._create("bin me")["id"]
+        assert client.delete(f"/api/diary/entries/{entry_id}").status_code == 409
+
+        client.patch(f"/api/diary/entries/{entry_id}", json={"deleted": True})
+        assert client.get("/api/diary/entries").json()["entries"][0]["flags"]["deleted_at"]
+        assert client.delete(f"/api/diary/entries/{entry_id}").status_code == 200
+        assert client.get("/api/diary/entries").json()["entries"] == []
+
+    def test_invalid_and_unknown_ids(self, keys):
+        assert client.patch("/api/diary/entries/..%2Fdiary", json={"pinned": True}).status_code in (404, 422)
+        assert client.patch("/api/diary/entries/not-an-id", json={"pinned": True}).status_code == 422
+        assert client.delete(f"/api/diary/entries/{'0' * 32}").status_code == 404
+
+    def test_legacy_diary_copied_not_moved(self, keys):
+        from server import config
+
+        client.post("/api/diary/save", json={"plaintext": "the old single diary"})
+        entries = client.get("/api/diary/entries").json()["entries"]
+        assert [e["id"] for e in entries] == ["legacy"]
+        assert config.DIARY_PATH.exists()
+
+        client.patch("/api/diary/entries/legacy", json={"deleted": True})
+        client.delete("/api/diary/entries/legacy")
+        assert client.get("/api/diary/entries").json()["entries"] == []
+
+
+class TestMetrics:
+    """Dashboard telemetry (server/metrics.py) fed by real encrypt/decrypt
+    calls - see /api/metrics."""
+
+    @pytest.fixture(autouse=True)
+    def _isolated_metrics(self, monkeypatch):
+        from server import main as server_main
+        from server import metrics
+
+        monkeypatch.setattr(server_main, "_CURRENT", _good_fish())
+        monkeypatch.setattr(server_main, "_CURRENT_SOURCE", "test:pushed")
+        metrics._reset_for_tests()
+        yield
+        metrics._reset_for_tests()
+
+    def test_empty_snapshot(self):
+        body = client.get("/api/metrics").json()
+        assert body["fish_activity"] == []
+        assert body["quality_tiers"] == {"GOOD": 0, "MEDIUM": 0, "BAD": 0}
+        assert body["ops"]["encrypt"]["rate_per_min"] == 0
+        assert body["latency_ms"]["kdf"] == {"p50": None, "p95": None, "n": 0}
+        assert body["latency_ms"]["wrap"] == {"p50": None, "p95": None, "n": 0}
+
+    def test_encrypt_feeds_latency_and_rate(self, keys):
+        sse = _parse_sse(client.post("/api/encrypt", json={"plaintext": "hi"}).text)
+        assert sse["done"][0]["status"] == "encrypted"
+
+        body = client.get("/api/metrics").json()
+        assert body["latency_ms"]["kdf"]["n"] == 1
+        assert body["latency_ms"]["kdf"]["p50"] is not None and body["latency_ms"]["kdf"]["p50"] >= 0
+        assert body["latency_ms"]["wrap"]["n"] == 1
+        assert body["latency_ms"]["wrap"]["p50"] is not None and body["latency_ms"]["wrap"]["p50"] >= 0
+        assert body["ops"]["encrypt"]["rate_per_min"] == 1
+        assert body["ops"]["decrypt"]["rate_per_min"] == 0
+
+    def test_decrypt_feeds_rate_but_not_encrypt_latency(self, keys):
+        pkg = _parse_sse(client.post("/api/encrypt", json={"plaintext": "hi"}).text)["done"][0]["package"]
+        before = client.get("/api/metrics").json()["latency_ms"]["kdf"]["n"]
+
+        sse = _parse_sse(client.post("/api/decrypt", json={"package": pkg, "private_key_pem": keys}).text)
+        assert sse["done"][0]["plaintext"] == "hi"
+
+        body = client.get("/api/metrics").json()
+        assert body["latency_ms"]["kdf"]["n"] == before  # decrypt doesn't run HKDF
+        assert body["ops"]["decrypt"]["rate_per_min"] == 1
+
+    def test_fish_poll_tick_records_activity_and_quality(self):
+        from server import main as server_main
+
+        # Run exactly one tick of _fish_poll_loop's body by calling the same
+        # helpers it calls, rather than the infinite loop itself.
+        from fishrand.observe import observation_stats
+        from fishrand.quality import classify_fish_quality
+        from server import config, metrics
+
+        data = server_main._CURRENT
+        stats = observation_stats(data)
+        quality = classify_fish_quality(
+            data,
+            stats,
+            good_fish_count_min=config.FISH_QUALITY_GOOD_FISH_COUNT_MIN,
+            good_activity_pct_min=config.FISH_QUALITY_GOOD_ACTIVITY_PCT_MIN,
+            medium_fish_count_min=config.FISH_QUALITY_MEDIUM_FISH_COUNT_MIN,
+            medium_activity_pct_min=config.FISH_QUALITY_MEDIUM_ACTIVITY_PCT_MIN,
+        )
+        metrics.record_fish_sample(stats.mean_activity_pct or 0.0, stats.max_fish_count or 0, quality)
+
+        body = client.get("/api/metrics").json()
+        assert len(body["fish_activity"]) == 1
+        assert body["fish_activity"][0]["fish_count"] == 2
+        assert body["quality_tiers"]["GOOD"] == 1  # _good_fish() is GOOD-quality by construction
+
+
+class TestVaultStatus:
+    """Cosmetic LOCKED/UNLOCKED relay the diary app pushes so other apps
+    (the dashboard) can show it too - never the key, never content."""
+
+    @pytest.fixture(autouse=True)
+    def _isolated_vault(self, monkeypatch):
+        from server import main as server_main
+
+        monkeypatch.setattr(server_main, "_VAULT_UNLOCKED", False)
+        monkeypatch.setattr(server_main, "_VAULT_AT", None)
+        yield
+
+    def test_default_locked(self):
+        assert client.get("/api/vault/status").json() == {"unlocked": False, "updated_at": None}
+
+    def test_post_flips_and_persists(self):
+        res = client.post("/api/vault/status", json={"unlocked": True})
+        assert res.status_code == 200
+        assert res.json()["unlocked"] is True
+        assert res.json()["updated_at"]
+
+        again = client.get("/api/vault/status").json()
+        assert again["unlocked"] is True
+        assert again["updated_at"] == res.json()["updated_at"]
+
+        back = client.post("/api/vault/status", json={"unlocked": False})
+        assert back.json()["unlocked"] is False
+
+
+class TestVisionSnapshot:
+    """/api/vision/snapshot just reads whatever vision.py last wrote to
+    config.VISION_FRAME_PATH - never touches a camera itself."""
+
+    @pytest.fixture(autouse=True)
+    def _isolated_frame_path(self, tmp_path, monkeypatch):
+        from server import config
+
+        monkeypatch.setattr(config, "VISION_FRAME_PATH", tmp_path / "vision" / "frame.jpg")
+        yield
+
+    def test_404_before_any_frame(self):
+        assert client.get("/api/vision/snapshot").status_code == 404
+
+    def test_200_once_a_frame_exists(self):
+        from server import config
+
+        config.VISION_FRAME_PATH.parent.mkdir(parents=True, exist_ok=True)
+        config.VISION_FRAME_PATH.write_bytes(b"\xff\xd8\xff\xe0fake-jpeg-bytes")
+
+        res = client.get("/api/vision/snapshot")
+        assert res.status_code == 200
+        assert res.headers["content-type"] == "image/jpeg"
+        assert res.content == b"\xff\xd8\xff\xe0fake-jpeg-bytes"
+

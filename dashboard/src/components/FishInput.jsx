@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { validateObservations } from '../api'
+import Icon from './Icon'
 
 function statRows(meta) {
   if (meta.frame_count != null) {
@@ -62,7 +63,7 @@ export default function FishInput({ onValidated }) {
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>🐟 1 · Fish observations</h2>
+        <h2><Icon name="fish" /> 1 · Fish observations</h2>
         <div className="panel-actions">
           <button onClick={() => fileRef.current?.click()} className="btn ghost">Upload JSON</button>
           <input ref={fileRef} type="file" accept="application/json" hidden onChange={onFile} />

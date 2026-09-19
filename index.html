@@ -236,6 +236,7 @@
   .stats .num{ font-size:clamp(30px,4.4vw,44px); font-weight:800; letter-spacing:-.03em; line-height:1; }
   .stats .num.accent{ color:var(--accent); }
   .stats .cap{ font-size:12px; color:var(--ink-dimmer); margin-top:10px; }
+  .stats .why{ font-size:11px; color:var(--ink-dimmer); opacity:.75; margin-top:8px; line-height:1.5; }
   @media (max-width:700px){ .stats{ grid-template-columns:1fr; } }
 
   /* ---------- quadrant ---------- */
@@ -566,7 +567,7 @@
       </div>
 
       <div class="stats reveal">
-        <div><div class="num accent"><span data-count="0">0</span>%</div><div class="cap">of your key's entropy comes from the fish</div></div>
+        <div><div class="num accent"><span data-count="0">0</span>%</div><div class="cap">of your key's entropy comes from the fish</div><div class="why">fish_hash is public and reproducible &mdash; anyone with the same webcam feed gets the same bytes, so it can't be a secret to derive entropy from. Not the LavaRand trick, where the camera output is kept secret and mixed in.</div></div>
         <div><div class="num"><span data-count="3072">0</span>-bit</div><div class="cap">RSA keypair. The private half lives only on your USB drive.</div></div>
         <div><div class="num"><span data-count="236">0</span></div><div class="cap">test functions, because the crypto core can only be funny if it is also correct</div></div>
       </div>

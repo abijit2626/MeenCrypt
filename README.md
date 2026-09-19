@@ -66,13 +66,28 @@ python cli.py keygen --output /media/USB/fishrand
 #    dashboard -> http://localhost:5173   diary -> http://localhost:5174
 #    server    -> http://localhost:8000
 
-# 3. encrypt / decrypt from the CLI
+#    optional: add the ESP32 + INMP441 mic over USB serial (Linux:
+#    /dev/ttyUSB0, sometimes /dev/ttyACM0). Omit --audio-port and audio
+#    capture is skipped entirely — it only fills in when fish quality is
+#    MEDIUM/BAD.
+./run.sh --web --camera-index 2 --audio-port /dev/ttyUSB0
+
+# 3. encrypt / decrypt from the CLI (same --audio-port / --no-audio flags
+#    work on `cli.py encrypt` directly, without the web apps)
 python cli.py encrypt --diary examples/diary.txt \
     --public-key /media/USB/fishrand/public_key.pem --out diary.pkg
 python cli.py decrypt --pkg diary.pkg \
     --private-key /media/USB/fishrand/private_key.pem
 
-# 4. stop everything
+# 4. try the drive lock (diary app only, no CLI equivalent): saving an
+#    entry at http://localhost:5174 lets you pick a currently-mounted USB
+#    drive; that drive's hardware serial gets baked into the entry, and
+#    unlocking it later fails with "drive missing" until that same drive is
+#    plugged back in. It's an app-level gate on top of the RSA crypto, not
+#    part of the encryption itself — `cli.py decrypt --private-key` still
+#    works with just the key file, drive or no drive.
+
+# 5. stop everything
 ./run.sh --stop
 ```
 
